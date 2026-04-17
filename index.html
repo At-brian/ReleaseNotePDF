@@ -202,6 +202,81 @@
     letter-spacing: 0.05em;
   }
 
+  /* ═════ OPTIONS / TOGGLES ═════ */
+  .options-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border-soft);
+  }
+
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .toggle-track {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    background: var(--taupe-light);
+    border-radius: 999px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track {
+    background: var(--rouge-vif);
+  }
+
+  .toggle input:checked + .toggle-track::after {
+    transform: translateX(16px);
+  }
+
+  .toggle-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .toggle-label strong {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--bordeaux);
+  }
+
+  .toggle-label small {
+    font-size: 11px;
+    color: var(--taupe);
+    font-weight: 500;
+  }
+
+  /* Hide scope rows when option is off */
+  .hide-scope .scope-row { display: none; }
+
   /* ═════ FIELDS (général) ═════ */
   .field-grid {
     display: grid;
@@ -620,6 +695,17 @@
           <input type="text" id="field-date" placeholder="Mars 2026">
         </div>
       </div>
+
+      <div class="options-row">
+        <label class="toggle">
+          <input type="checkbox" id="toggle-scope">
+          <span class="toggle-track"></span>
+          <span class="toggle-label">
+            <strong>Afficher le périmètre sur chaque élément</strong>
+            <small>Active les champs de périmètre et le compteur associé dans le PDF.</small>
+          </span>
+        </label>
+      </div>
     </section>
 
     <!-- Section Nouveautés -->
@@ -737,6 +823,7 @@
     produit: 'Mercalys',
     version: '8.17.4',
     date: 'Mars 2026',
+    showScope: false,
     evolutions: [],
     correctifs: []
   };
@@ -869,6 +956,12 @@
     document.getElementById('field-produit').value = state.produit;
     document.getElementById('field-version').value = state.version;
     document.getElementById('field-date').value = state.date;
+    document.getElementById('toggle-scope').checked = state.showScope;
+    applyScopeVisibility();
+  }
+
+  function applyScopeVisibility() {
+    document.body.classList.toggle('hide-scope', !state.showScope);
   }
 
   // ════════════════════════════════════════════════════
@@ -933,6 +1026,7 @@
     state.produit = '';
     state.version = '';
     state.date = '';
+    state.showScope = false;
     state.evolutions = [];
     state.correctifs = [];
     syncGeneralFields();
@@ -982,6 +1076,7 @@
       produit: state.produit,
       version: state.version,
       date: state.date,
+      showScope: state.showScope,
       evolutions: state.evolutions.map(x => ({ title: x.title, description: x.description, scope: x.scope })),
       correctifs: state.correctifs.map(x => ({ title: x.title, description: x.description, scope: x.scope }))
     }, null, 2);
@@ -1005,6 +1100,7 @@
         state.produit = data.produit || '';
         state.version = data.version || '';
         state.date = data.date || '';
+        state.showScope = !!data.showScope;
         state.evolutions = Array.isArray(data.evolutions)
           ? data.evolutions.map(x => ({ id: uid(), title: x.title || '', description: x.description || '', scope: x.scope || '' }))
           : [];
@@ -1040,6 +1136,12 @@
       state[f] = e.target.value;
       schedulePreview();
     });
+  });
+
+  document.getElementById('toggle-scope').addEventListener('change', e => {
+    state.showScope = e.target.checked;
+    applyScopeVisibility();
+    schedulePreview();
   });
 
   document.getElementById('add-evo-btn').addEventListener('click', () => addItem('evo'));
@@ -1207,7 +1309,10 @@
       const titleLines = doc.splitTextToSize(title || 'Sans titre', contentW);
       doc.setFontSize(8); doc.setFont('helvetica', 'normal');
       const bodyLines = doc.splitTextToSize(body || '—', contentW);
-      const h = 3.5 + 3 + 2 + titleLines.length * 3.8 + 2 + bodyLines.length * 3.5 + 2.5 + 3 + 3.5;
+      // Base: top pad + badge + gap + title + gap + body + bottom pad
+      let h = 3.5 + 3 + 2 + titleLines.length * 3.8 + 2 + bodyLines.length * 3.5 + 3.5;
+      // Add scope row height only if scope is enabled
+      if (data.showScope) h += 2.5 + 3;
       return { h, titleLines, bodyLines };
     }
 
@@ -1245,14 +1350,17 @@
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       bodyLines.forEach(line => { doc.text(line, cx, cy); cy += 3.5; });
-      cy += 1.5;
 
-      setFill(TAUPE);
-      doc.triangle(cx, cy - 1.5, cx + 1.6, cy - 2.3, cx + 1.6, cy - 0.7, 'F');
-      setText(TAUPE);
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7);
-      doc.text(scope || '—', cx + 3, cy - 1);
+      // Draw scope only if enabled
+      if (data.showScope) {
+        cy += 1.5;
+        setFill(TAUPE);
+        doc.triangle(cx, cy - 1.5, cx + 1.6, cy - 2.3, cx + 1.6, cy - 0.7, 'F');
+        setText(TAUPE);
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(7);
+        doc.text(scope || '—', cx + 3, cy - 1);
+      }
 
       return h;
     }
@@ -1282,20 +1390,25 @@
     introLines.forEach(l => { doc.text(l, ML, y); y += 4.5; });
     y += 4;
 
-    // Stats row
-    const allScopes = new Set();
-    [...data.evolutions, ...data.correctifs].forEach(x => {
-      const parts = (x.scope || '').split(/[&,]/).map(s => s.trim()).filter(Boolean);
-      parts.forEach(p => allScopes.add(p));
-    });
-
-    const statW = (PW - ML - MR - 10) / 3;
-    const statH = 20;
+    // Stats row — 2 or 3 boxes depending on showScope
     const statBoxes = [
       { num: nEvo, label: 'NOUVELLES FONCTIONNALITES', bg: ROUGE_LIGHT, color: ROUGE_VIF },
-      { num: nFix, label: 'CORRECTIFS APPLIQUES',      bg: GOLD_LIGHT,  color: GOLD },
-      { num: allScopes.size, label: 'PERIMETRES CONCERNES', bg: BEIGE, color: BORDEAUX }
+      { num: nFix, label: 'CORRECTIFS APPLIQUES',      bg: GOLD_LIGHT,  color: GOLD }
     ];
+
+    if (data.showScope) {
+      const allScopes = new Set();
+      [...data.evolutions, ...data.correctifs].forEach(x => {
+        const parts = (x.scope || '').split(/[&,]/).map(s => s.trim()).filter(Boolean);
+        parts.forEach(p => allScopes.add(p));
+      });
+      statBoxes.push({ num: allScopes.size, label: 'PERIMETRES CONCERNES', bg: BEIGE, color: BORDEAUX });
+    }
+
+    const nBoxes = statBoxes.length;
+    const totalGap = 5 * (nBoxes - 1);
+    const statW = (PW - ML - MR - totalGap) / nBoxes;
+    const statH = 20;
 
     statBoxes.forEach((s, i) => {
       const bx = ML + i * (statW + 5);
