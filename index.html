@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Générateur Note de Version — Mercalys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bordeaux: #511227;
+    --bordeaux-deep: #3A0C1C;
+    --rouge-bx: #82072A;
+    --rouge-vif: #FF2822;
+    --rouge-light: #FCEAE9;
+    --rouge-pale: #FDF4F4;
+    --beige: #F2EBE2;
+    --beige-light: #FAF7F3;
+    --taupe: #C8B39F;
+    --taupe-light: #E5D9C9;
+    --gold: #D4A853;
+    --gold-light: #F5EDD8;
+    --gold-pale: #FAF4E3;
+    --dark-text: #2D1018;
+    --ink: #1A0810;
+    --paper: #FDFBF7;
+    --border-soft: #EBE0D2;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 10% 15%, rgba(212, 168, 83, 0.06) 0%, transparent 40%),
+      radial-gradient(circle at 90% 85%, rgba(130, 7, 42, 0.05) 0%, transparent 45%),
+      linear-gradient(180deg, var(--paper) 0%, #F5F0E8 100%);
+    z-index: -1;
+  }
+
+  /* ═════ MASTHEAD ═════ */
+  .masthead {
+    background: var(--bordeaux-deep);
+    color: white;
+    padding: 24px 32px 28px;
+    position: relative;
+    border-bottom: 3px solid var(--gold);
+  }
+
+  .masthead::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -3px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold) 0%, var(--rouge-vif) 50%, var(--gold) 100%);
+  }
+
+  .masthead-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .brand-stamp {
+    font-family: 'DM Serif Display', serif;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-style: italic;
+  }
+
+  .masthead h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(26px, 4vw, 40px);
+    line-height: 1;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  .masthead h1 em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .masthead-sub {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    margin-top: 8px;
+    max-width: 480px;
+    font-weight: 300;
+  }
+
+  .edition-tag {
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--gold);
+    text-align: right;
+  }
+
+  .edition-tag small {
+    display: block;
+    font-family: 'Manrope', sans-serif;
+    font-style: normal;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: rgba(232, 213, 186, 0.7);
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  /* ═════ LAYOUT ═════ */
+  .layout {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 28px 32px 60px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+
+  @media (max-width: 1000px) {
+    .layout { grid-template-columns: 1fr; }
+    .preview-wrap { position: static !important; height: 600px; }
+  }
+
+  /* ═════ EDITOR ═════ */
+  .editor {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .section {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid var(--border-soft);
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(81, 18, 39, 0.04);
+  }
+
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .section-head h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--bordeaux);
+    line-height: 1.1;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .section-accent {
+    display: inline-block;
+    width: 4px;
+    height: 20px;
+    background: var(--gold);
+    border-radius: 2px;
+    transform: translateY(3px);
+  }
+
+  .section-accent.rouge { background: var(--rouge-vif); }
+
+  .count-pill {
+    font-family: 'Manrope', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--bordeaux);
+    background: var(--beige);
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ═════ FIELDS (général) ═════ */
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .field-grid { grid-template-columns: 1fr; }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--taupe);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .field input,
+  .field textarea,
+  .item-title,
+  .item-desc,
+  .item-scope {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--beige-light);
+    border: 1.5px solid transparent;
+    border-radius: 8px;
+    padding: 10px 12px;
+    transition: all 0.15s;
+    resize: vertical;
+  }
+
+  .field input:focus,
+  .field textarea:focus,
+  .item-title:focus,
+  .item-desc:focus,
+  .item-scope:focus {
+    outline: none;
+    border-color: var(--rouge-vif);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 40, 34, 0.08);
+  }
+
+  /* ═════ ITEM CARDS ═════ */
+  .items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .item-card {
+    background: var(--gold-pale);
+    border: 1px solid var(--gold-light);
+    border-left: 4px solid var(--gold);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s;
+    animation: slideIn 0.25s ease-out;
+  }
+
+  .item-card.evo {
+    background: var(--rouge-pale);
+    border-color: var(--rouge-light);
+    border-left-color: var(--rouge-vif);
+  }
+
+  .item-card:hover {
+    box-shadow: 0 4px 12px rgba(81, 18, 39, 0.08);
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .item-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .item-card.evo .item-badge { color: var(--rouge-vif); }
+
+  .item-controls {
+    display: flex;
+    gap: 4px;
+  }
+
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--taupe);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all 0.15s;
+    display: grid;
+    place-items: center;
+  }
+
+  .icon-btn:hover {
+    background: white;
+    color: var(--bordeaux);
+  }
+
+  .icon-btn.danger:hover {
+    background: var(--rouge-light);
+    color: var(--rouge-bx);
+  }
+
+  .item-card .item-title {
+    background: white;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .item-card .item-desc {
+    background: white;
+    font-size: 13px;
+    line-height: 1.55;
+    min-height: 60px;
+  }
+
+  .scope-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .scope-row label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--taupe);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .scope-row input {
+    background: white;
+    font-size: 13px;
+  }
+
+  /* ═════ ADD BUTTON ═════ */
+  .add-btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1.5px dashed var(--taupe);
+    border-radius: 10px;
+    color: var(--bordeaux);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .add-btn:hover {
+    border-color: var(--rouge-vif);
+    background: var(--rouge-pale);
+    color: var(--rouge-bx);
+  }
+
+  .add-btn-plus {
+    font-size: 16px;
+    font-weight: 400;
+  }
+
+  .empty-state {
+    padding: 24px;
+    text-align: center;
+    color: var(--taupe);
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  /* ═════ PREVIEW ═════ */
+  .preview-wrap {
+    position: sticky;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .preview-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .preview-label {
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--bordeaux);
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .preview-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--rouge-vif);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .preview-frame {
+    width: 100%;
+    height: calc(100vh - 160px);
+    min-height: 540px;
+    border: none;
+    border-radius: 12px;
+    background: var(--beige);
+    box-shadow: 0 10px 40px rgba(81, 18, 39, 0.12);
+  }
+
+  /* ═════ ACTIONS BAR ═════ */
+  .action-bar {
+    background: var(--bordeaux);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    box-shadow: 0 8px 28px rgba(81, 18, 39, 0.2);
+  }
+
+  .action-bar .primary-btn {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 24px;
+    background: var(--rouge-vif);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .action-bar .primary-btn:hover {
+    background: white;
+    color: var(--rouge-bx);
+    transform: translateY(-1px);
+  }
+
+  .action-bar .secondary-btn {
+    padding: 11px 16px;
+    background: transparent;
+    border: 1.5px solid rgba(255,255,255,0.3);
+    color: white;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .action-bar .secondary-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(212, 168, 83, 0.08);
+  }
+
+  /* ═════ TOAST ═════ */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--bordeaux);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    opacity: 0;
+    transition: all 0.3s ease-out;
+    z-index: 1000;
+    border-left: 3px solid var(--gold);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ═════ FOOTER ═════ */
+  footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 10px;
+    color: var(--taupe);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.5);
+    border-top: 1px solid var(--border-soft);
+  }
+
+  footer strong { color: var(--bordeaux); }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div>
+      <div class="brand-stamp">Les Mousquetaires · STIME DSI</div>
+      <h1>Générateur <em>Note de Version</em></h1>
+      <div class="masthead-sub">Remplis les champs, télécharge ton PDF magazine. Aucune IA, aucune connexion.</div>
+    </div>
+    <div class="edition-tag">
+      Édition magazine
+      <small>GESCOM PDV</small>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- ═════ COLONNE ÉDITEUR ═════ -->
+  <div class="editor">
+
+    <!-- Action bar (stickier au dessus) -->
+    <div class="action-bar">
+      <button class="primary-btn" id="download-btn">
+        ⬇  Télécharger le PDF
+      </button>
+      <button class="secondary-btn" id="export-btn" title="Sauvegarde JSON du brouillon">
+        💾 Exporter brouillon
+      </button>
+      <button class="secondary-btn" id="import-btn" title="Importer un brouillon JSON">
+        📂 Importer
+      </button>
+      <button class="secondary-btn" id="example-btn" title="Charger l'exemple Mercalys 8.17.4">
+        ✨ Exemple
+      </button>
+      <button class="secondary-btn" id="reset-btn" title="Tout effacer">
+        ↻ Reset
+      </button>
+      <input type="file" id="import-file" accept="application/json" hidden>
+    </div>
+
+    <!-- Section Général -->
+    <section class="section">
+      <div class="section-head">
+        <h2><span class="section-accent"></span>Informations générales</h2>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="field-produit">Produit</label>
+          <input type="text" id="field-produit" placeholder="Mercalys">
+        </div>
+        <div class="field">
+          <label for="field-version">Version</label>
+          <input type="text" id="field-version" placeholder="8.17.4">
+        </div>
+        <div class="field">
+          <label for="field-date">Date</label>
+          <input type="text" id="field-date" placeholder="Mars 2026">
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Nouveautés -->
+    <section class="section">
+      <div class="section-head">
+        <h2><span class="section-accent rouge"></span>Nouvelles fonctionnalités</h2>
+        <span class="count-pill" id="count-evo">0</span>
+      </div>
+      <div class="items-list" id="evolutions-list"></div>
+      <button class="add-btn" id="add-evo-btn">
+        <span class="add-btn-plus">+</span> Ajouter une nouveauté
+      </button>
+    </section>
+
+    <!-- Section Correctifs -->
+    <section class="section">
+      <div class="section-head">
+        <h2><span class="section-accent"></span>Correctifs et améliorations</h2>
+        <span class="count-pill" id="count-fix">0</span>
+      </div>
+      <div class="items-list" id="correctifs-list"></div>
+      <button class="add-btn" id="add-fix-btn">
+        <span class="add-btn-plus">+</span> Ajouter un correctif
+      </button>
+    </section>
+
+  </div>
+
+  <!-- ═════ COLONNE APERÇU ═════ -->
+  <aside class="preview-wrap">
+    <div class="preview-toolbar">
+      <div class="preview-label">Aperçu en temps réel</div>
+    </div>
+    <iframe class="preview-frame" id="preview-frame" title="Aperçu PDF"></iframe>
+  </aside>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <strong>Groupement Les Mousquetaires</strong> · STIME DSI · GESCOM PDV
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  // ════════════════════════════════════════════════════
+  // EXAMPLE DATA (Mercalys 8.17.4)
+  // ════════════════════════════════════════════════════
+
+  const EXAMPLE_EVOLUTIONS = [
+    { title: "État déclaratif des dons",
+      description: "Générez un état d'aide à la déclaration fiscale des dons depuis l'outil Pilotage. Dans les stats Entrées/Sorties article, l'état liste les articles avec quantités (pièce/volume) et totalisation en valeur d'achat HT.",
+      scope: "France AI" },
+    { title: "Bon de commande — Fournisseurs CDR",
+      description: "Lors de la passation manuelle de commandes CDR, un bon de commande est désormais imprimé (comme pour les fournisseurs directs/locaux) au lieu de transmettre vers ATHOS.",
+      scope: "France & Belgique" },
+    { title: "Suppression confirmation ATHOS",
+      description: "Le message de confirmation après passation manuelle réussie est supprimé. Le processus se clôture automatiquement, évitant tout blocage des passations manuelles ou automatiques.",
+      scope: "France & Belgique" },
+    { title: "Blocage prix barrés EEG SES",
+      description: "L'affichage des prix barrés sur les étiquettes électroniques EEG SES est bloqué lors de l'application d'une promotion, conformément à la réglementation.",
+      scope: "France" },
+    { title: "Étiquetage €/dose (DPH)",
+      description: "L'unité « €/dose » est imprimée pour certains articles Droguerie, Parfumerie, Hygiène au lieu de « €/pièce », conformément à la législation.",
+      scope: "Belgique" },
+    { title: "Impression états de déchargement",
+      description: "L'impression ne génère plus systématiquement 3 pages minimum pour un nombre réduit d'articles lors de sessions multiples (ex : deux sessions Zébra).",
+      scope: "Tous PDV" }
+  ];
+
+  const EXAMPLE_CORRECTIFS = [
+    { title: "ATHOS en arrière-plan",
+      description: "ATHOS ne s'ouvre plus en arrière-plan de Mercalys lors du passage des commandes.",
+      scope: "France AI & EM" },
+    { title: "Rapport Stock Compare",
+      description: "Correction de l'erreur lors de la génération du rapport Stock Compare.",
+      scope: "France & Pologne" },
+    { title: "Compatibilité Windows 11",
+      description: "Améliorations de compatibilité pour Mercalys sous Windows 11.",
+      scope: "Tous pays" },
+    { title: "Rattrapage PAP 2024",
+      description: "Rattrapage des traitements Prime d'Aide Personnalisée pour l'exercice 2024.",
+      scope: "France AI" },
+    { title: "Séparateurs éditions Excel",
+      description: "Correction des séparateurs manquants dans les éditions Excel (inventaires).",
+      scope: "Tous pays" },
+    { title: "Prix recommandé non appliqué",
+      description: "Le prix de vente s'aligne désormais correctement sur le prix recommandé.",
+      scope: "PDV concernés" },
+    { title: "Écart 0.01 ct Mercalys/Storeline",
+      description: "Correction de l'écart de prix entre Mercalys et Storeline.",
+      scope: "PDV concernés" },
+    { title: "Étiquette 80 — Origine France",
+      description: "L'étiquette affiche « France » au lieu du code 250 pour l'origine produit.",
+      scope: "France" },
+    { title: "Lignes tarifaires blocage prix",
+      description: "Correction des lignes tarifaires générées avec un blocage prix injustifié.",
+      scope: "France" },
+    { title: "Listes automatiques figées",
+      description: "L'écran ne reste plus figé à l'ajout de critères prix d'achat sur les listes.",
+      scope: "Tous pays" },
+    { title: "Performance — Décommission P616",
+      description: "Suppression de l'évolution P616 (Report Pologne) sur les PDV hors Pologne.",
+      scope: "France, Belgique, Portugal" }
+  ];
+
+  // ════════════════════════════════════════════════════
+  // STATE
+  // ════════════════════════════════════════════════════
+
+  const state = {
+    produit: 'Mercalys',
+    version: '8.17.4',
+    date: 'Mars 2026',
+    evolutions: [],
+    correctifs: []
+  };
+
+  let debounceTimer = null;
+  let currentPdfUrl = null;
+
+  function uid() { return 'id_' + Math.random().toString(36).slice(2, 10); }
+
+  // ════════════════════════════════════════════════════
+  // RENDERING
+  // ════════════════════════════════════════════════════
+
+  function renderAll() {
+    renderItems('evo');
+    renderItems('fix');
+    updateCounts();
+  }
+
+  function renderItems(type) {
+    const containerId = type === 'evo' ? 'evolutions-list' : 'correctifs-list';
+    const container = document.getElementById(containerId);
+    const items = type === 'evo' ? state.evolutions : state.correctifs;
+
+    container.innerHTML = '';
+
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = type === 'evo'
+        ? 'Aucune nouveauté pour cette version.'
+        : 'Aucun correctif pour cette version.';
+      container.appendChild(empty);
+      return;
+    }
+
+    items.forEach((item, idx) => {
+      container.appendChild(createItemCard(item, type, idx, items.length));
+    });
+  }
+
+  function createItemCard(item, type, idx, total) {
+    const card = document.createElement('div');
+    card.className = `item-card ${type}`;
+    card.dataset.id = item.id;
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'item-header';
+
+    const badge = document.createElement('span');
+    badge.className = 'item-badge';
+    badge.textContent = (type === 'evo' ? '★ Nouveauté' : '✓ Correctif') + ' #' + (idx + 1);
+
+    const controls = document.createElement('div');
+    controls.className = 'item-controls';
+
+    const upBtn = document.createElement('button');
+    upBtn.className = 'icon-btn';
+    upBtn.title = 'Monter';
+    upBtn.textContent = '↑';
+    upBtn.disabled = idx === 0;
+    if (idx === 0) upBtn.style.opacity = '0.3';
+    upBtn.addEventListener('click', () => moveItem(type, item.id, -1));
+
+    const downBtn = document.createElement('button');
+    downBtn.className = 'icon-btn';
+    downBtn.title = 'Descendre';
+    downBtn.textContent = '↓';
+    downBtn.disabled = idx === total - 1;
+    if (idx === total - 1) downBtn.style.opacity = '0.3';
+    downBtn.addEventListener('click', () => moveItem(type, item.id, 1));
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'icon-btn danger';
+    deleteBtn.title = 'Supprimer';
+    deleteBtn.textContent = '×';
+    deleteBtn.addEventListener('click', () => deleteItem(type, item.id));
+
+    controls.appendChild(upBtn);
+    controls.appendChild(downBtn);
+    controls.appendChild(deleteBtn);
+    header.appendChild(badge);
+    header.appendChild(controls);
+
+    // Title
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.className = 'item-title';
+    titleInput.placeholder = 'Titre (max ~55 caractères)';
+    titleInput.value = item.title || '';
+    titleInput.addEventListener('input', e => updateItem(type, item.id, 'title', e.target.value));
+
+    // Description
+    const descInput = document.createElement('textarea');
+    descInput.className = 'item-desc';
+    descInput.placeholder = 'Description orientée point de vente (1 à 3 phrases)';
+    descInput.rows = 3;
+    descInput.value = item.description || '';
+    descInput.addEventListener('input', e => updateItem(type, item.id, 'description', e.target.value));
+
+    // Scope row
+    const scopeRow = document.createElement('div');
+    scopeRow.className = 'scope-row';
+    const scopeLabel = document.createElement('label');
+    scopeLabel.textContent = 'Périmètre';
+    const scopeInput = document.createElement('input');
+    scopeInput.type = 'text';
+    scopeInput.className = 'item-scope';
+    scopeInput.placeholder = 'ex : France, Belgique, Tous pays…';
+    scopeInput.value = item.scope || '';
+    scopeInput.addEventListener('input', e => updateItem(type, item.id, 'scope', e.target.value));
+    scopeRow.appendChild(scopeLabel);
+    scopeRow.appendChild(scopeInput);
+
+    card.appendChild(header);
+    card.appendChild(titleInput);
+    card.appendChild(descInput);
+    card.appendChild(scopeRow);
+
+    return card;
+  }
+
+  function updateCounts() {
+    document.getElementById('count-evo').textContent = state.evolutions.length;
+    document.getElementById('count-fix').textContent = state.correctifs.length;
+  }
+
+  function syncGeneralFields() {
+    document.getElementById('field-produit').value = state.produit;
+    document.getElementById('field-version').value = state.version;
+    document.getElementById('field-date').value = state.date;
+  }
+
+  // ════════════════════════════════════════════════════
+  // STATE MUTATIONS
+  // ════════════════════════════════════════════════════
+
+  function updateItem(type, id, field, value) {
+    const arr = type === 'evo' ? state.evolutions : state.correctifs;
+    const item = arr.find(x => x.id === id);
+    if (item) {
+      item[field] = value;
+      schedulePreview();
+    }
+  }
+
+  function deleteItem(type, id) {
+    if (type === 'evo') state.evolutions = state.evolutions.filter(x => x.id !== id);
+    else state.correctifs = state.correctifs.filter(x => x.id !== id);
+    renderAll();
+    schedulePreview();
+  }
+
+  function moveItem(type, id, delta) {
+    const arr = type === 'evo' ? state.evolutions : state.correctifs;
+    const idx = arr.findIndex(x => x.id === id);
+    const newIdx = idx + delta;
+    if (newIdx < 0 || newIdx >= arr.length) return;
+    [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+    renderAll();
+    schedulePreview();
+  }
+
+  function addItem(type) {
+    const item = { id: uid(), title: '', description: '', scope: '' };
+    if (type === 'evo') state.evolutions.push(item);
+    else state.correctifs.push(item);
+    renderAll();
+    setTimeout(() => {
+      const list = document.getElementById(type === 'evo' ? 'evolutions-list' : 'correctifs-list');
+      const cards = list.querySelectorAll('.item-card');
+      const last = cards[cards.length - 1];
+      if (last) {
+        last.querySelector('.item-title').focus();
+        last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+    schedulePreview();
+  }
+
+  function loadExample() {
+    state.produit = 'Mercalys';
+    state.version = '8.17.4';
+    state.date = 'Mars 2026';
+    state.evolutions = EXAMPLE_EVOLUTIONS.map(x => ({ id: uid(), ...x }));
+    state.correctifs = EXAMPLE_CORRECTIFS.map(x => ({ id: uid(), ...x }));
+    syncGeneralFields();
+    renderAll();
+    schedulePreview();
+  }
+
+  function resetAll() {
+    state.produit = '';
+    state.version = '';
+    state.date = '';
+    state.evolutions = [];
+    state.correctifs = [];
+    syncGeneralFields();
+    renderAll();
+    schedulePreview();
+  }
+
+  // ════════════════════════════════════════════════════
+  // PREVIEW + DOWNLOAD
+  // ════════════════════════════════════════════════════
+
+  function schedulePreview() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(updatePreview, 400);
+  }
+
+  function updatePreview() {
+    try {
+      const blob = generateMagazinePdf(state);
+      const url = URL.createObjectURL(blob);
+      const iframe = document.getElementById('preview-frame');
+      iframe.src = url;
+      if (currentPdfUrl) URL.revokeObjectURL(currentPdfUrl);
+      currentPdfUrl = url;
+    } catch (err) {
+      console.error('Preview error:', err);
+    }
+  }
+
+  function downloadPdf() {
+    const blob = generateMagazinePdf(state);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeProd = (state.produit || 'Note').replace(/[^\w-]/g, '_');
+    const safeVer = (state.version || '').replace(/\./g, '_');
+    a.download = `${safeProd}${safeVer ? '_' + safeVer : ''}_Note_de_version.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('PDF téléchargé');
+  }
+
+  function exportDraft() {
+    const json = JSON.stringify({
+      produit: state.produit,
+      version: state.version,
+      date: state.date,
+      evolutions: state.evolutions.map(x => ({ title: x.title, description: x.description, scope: x.scope })),
+      correctifs: state.correctifs.map(x => ({ title: x.title, description: x.description, scope: x.scope }))
+    }, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeProd = (state.produit || 'brouillon').toLowerCase().replace(/[^\w-]/g, '_');
+    const safeVer = (state.version || '').replace(/\./g, '_');
+    a.download = `brouillon_${safeProd}${safeVer ? '_' + safeVer : ''}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Brouillon exporté');
+  }
+
+  function importDraft(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        state.produit = data.produit || '';
+        state.version = data.version || '';
+        state.date = data.date || '';
+        state.evolutions = Array.isArray(data.evolutions)
+          ? data.evolutions.map(x => ({ id: uid(), title: x.title || '', description: x.description || '', scope: x.scope || '' }))
+          : [];
+        state.correctifs = Array.isArray(data.correctifs)
+          ? data.correctifs.map(x => ({ id: uid(), title: x.title || '', description: x.description || '', scope: x.scope || '' }))
+          : [];
+        syncGeneralFields();
+        renderAll();
+        schedulePreview();
+        toast('Brouillon importé');
+      } catch (err) {
+        toast('Fichier JSON invalide', true);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function toast(msg, isError) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.borderLeftColor = isError ? 'var(--rouge-vif)' : 'var(--gold)';
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  // ════════════════════════════════════════════════════
+  // EVENT BINDING
+  // ════════════════════════════════════════════════════
+
+  ['produit', 'version', 'date'].forEach(f => {
+    document.getElementById('field-' + f).addEventListener('input', e => {
+      state[f] = e.target.value;
+      schedulePreview();
+    });
+  });
+
+  document.getElementById('add-evo-btn').addEventListener('click', () => addItem('evo'));
+  document.getElementById('add-fix-btn').addEventListener('click', () => addItem('fix'));
+  document.getElementById('download-btn').addEventListener('click', downloadPdf);
+  document.getElementById('export-btn').addEventListener('click', exportDraft);
+  document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
+  document.getElementById('import-file').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f) importDraft(f);
+    e.target.value = '';
+  });
+  document.getElementById('example-btn').addEventListener('click', () => {
+    if (state.evolutions.length + state.correctifs.length > 0) {
+      if (!confirm("Remplacer le contenu actuel par l'exemple Mercalys 8.17.4 ?")) return;
+    }
+    loadExample();
+    toast('Exemple chargé');
+  });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (state.evolutions.length + state.correctifs.length === 0) return;
+    if (!confirm('Tout effacer ?')) return;
+    resetAll();
+    toast('Contenu effacé');
+  });
+
+  // ════════════════════════════════════════════════════
+  // INIT
+  // ════════════════════════════════════════════════════
+
+  loadExample();
+
+  // ════════════════════════════════════════════════════
+  // PDF GENERATOR — Magazine Mousquetaires
+  // ════════════════════════════════════════════════════
+
+  function generateMagazinePdf(data) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    const BORDEAUX = [81, 18, 39];
+    const BORDEAUX_DEEP = [58, 12, 28];
+    const ROUGE_VIF = [255, 40, 34];
+    const ROUGE_LIGHT = [252, 234, 233];
+    const GOLD = [212, 168, 83];
+    const GOLD_LIGHT = [245, 237, 216];
+    const BEIGE = [242, 235, 226];
+    const TAUPE = [200, 179, 159];
+    const TAUPE_LIGHT = [232, 222, 210];
+    const DARK = [45, 16, 24];
+    const WHITE = [255, 255, 255];
+
+    const PW = 210, PH = 297;
+    const ML = 15, MR = 15, MT = 32, MB = 18;
+    const COL_GAP = 8;
+    const COL_W = (PW - ML - MR - COL_GAP) / 2;
+
+    let pageNum = 1;
+
+    const produit = data.produit || 'Produit';
+    const version = data.version || '';
+    const date = data.date || '';
+    const nEvo = data.evolutions.length;
+    const nFix = data.correctifs.length;
+
+    function setFill(c) { doc.setFillColor(c[0], c[1], c[2]); }
+    function setDraw(c) { doc.setDrawColor(c[0], c[1], c[2]); }
+    function setText(c) { doc.setTextColor(c[0], c[1], c[2]); }
+
+    function drawHeader(isCover) {
+      setFill(BORDEAUX_DEEP);
+      doc.rect(0, 0, PW, 26, 'F');
+      setFill(BORDEAUX);
+      doc.rect(0, 0, PW, 1.5, 'F');
+      setDraw(GOLD);
+      doc.setLineWidth(0.8);
+      doc.line(0, 26, PW, 26);
+
+      if (isCover) {
+        setText([212, 168, 83]);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.text('LES MOUSQUETAIRES  ·  STIME DSI', ML, 7);
+
+        setText(WHITE);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.text(`${produit}${version ? ' ' + version : ''}`, ML, 15);
+
+        setText([212, 168, 83]);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.text('Note de version — Points de vente', ML, 21);
+
+        if (date) {
+          setText([232, 213, 186]);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text(date, PW - MR, 15, { align: 'right' });
+        }
+
+        setFill(ROUGE_VIF);
+        const pillW = 22, pillH = 5;
+        doc.roundedRect(PW - MR - pillW, 18, pillW, pillH, 2.5, 2.5, 'F');
+        setText(WHITE);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        doc.text('PRODUCTION', PW - MR - pillW / 2, 21.3, { align: 'center' });
+      } else {
+        setText(WHITE);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.text(`${produit}${version ? ' ' + version : ''}`, ML, 13);
+        setText([212, 168, 83]);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text('Note de version  ·  Suite', ML, 19);
+        if (date) {
+          setText([232, 213, 186]);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.text(date, PW - MR, 13, { align: 'right' });
+        }
+      }
+    }
+
+    function drawFooter(pNum) {
+      const y = PH - 10;
+      setDraw(TAUPE_LIGHT);
+      doc.setLineWidth(0.2);
+      doc.line(ML, y - 4, PW - MR, y - 4);
+      setText(TAUPE);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.text('Groupement Les Mousquetaires  ·  STIME DSI  ·  GESCOM PDV', ML, y);
+      doc.text('Document à usage interne', PW / 2, y, { align: 'center' });
+      doc.text(`Page ${pNum}`, PW - MR, y, { align: 'right' });
+    }
+
+    function drawGoldRule(y, widthFactor) {
+      widthFactor = widthFactor || 1;
+      const w = (PW - ML - MR) * widthFactor;
+      const xs = ML + ((PW - ML - MR) - w) / 2;
+      setDraw(GOLD);
+      doc.setLineWidth(0.6);
+      doc.line(xs, y, xs + w, y);
+      if (widthFactor < 1) {
+        setFill(GOLD);
+        doc.circle(PW / 2, y, 0.6, 'F');
+      }
+    }
+
+    function drawSectionHeader(y, text, accentColor) {
+      setFill(accentColor);
+      doc.rect(ML, y - 4.5, 3, 4.5, 'F');
+      setText(BORDEAUX);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(text, ML + 5.5, y);
+    }
+
+    function measureCardHeight(title, body, scope, width) {
+      const contentW = width - 8;
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+      const titleLines = doc.splitTextToSize(title || 'Sans titre', contentW);
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      const bodyLines = doc.splitTextToSize(body || '—', contentW);
+      const h = 3.5 + 3 + 2 + titleLines.length * 3.8 + 2 + bodyLines.length * 3.5 + 2.5 + 3 + 3.5;
+      return { h, titleLines, bodyLines };
+    }
+
+    function drawCard(x, y, w, title, body, scope, type) {
+      const accentColor = type === 'evo' ? ROUGE_VIF : GOLD;
+      const bgColor = type === 'evo' ? ROUGE_LIGHT : GOLD_LIGHT;
+      const badge = type === 'evo' ? 'NOUVEAUTE' : 'CORRECTIF';
+
+      const { h, titleLines, bodyLines } = measureCardHeight(title, body, scope, w);
+
+      setFill(bgColor);
+      setDraw([224, 214, 204]);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, y, w, h, 2.5, 2.5, 'FD');
+
+      setFill(accentColor);
+      doc.roundedRect(x, y, 1.8, h, 0.9, 0.9, 'F');
+
+      const cx = x + 5;
+      let cy = y + 5.5;
+
+      setText(accentColor);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.text(badge, cx, cy);
+      cy += 5;
+
+      setText(BORDEAUX);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      titleLines.forEach(line => { doc.text(line, cx, cy); cy += 3.8; });
+      cy += 1;
+
+      setText(DARK);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      bodyLines.forEach(line => { doc.text(line, cx, cy); cy += 3.5; });
+      cy += 1.5;
+
+      setFill(TAUPE);
+      doc.triangle(cx, cy - 1.5, cx + 1.6, cy - 2.3, cx + 1.6, cy - 0.7, 'F');
+      setText(TAUPE);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.text(scope || '—', cx + 3, cy - 1);
+
+      return h;
+    }
+
+    function ensureSpace(currentY, needed) {
+      if (currentY + needed > PH - MB) {
+        drawFooter(pageNum);
+        doc.addPage();
+        pageNum++;
+        drawHeader(false);
+        return MT + 2;
+      }
+      return currentY;
+    }
+
+    // ═════ PAGE 1 — COVER ═════
+    drawHeader(true);
+    let y = MT + 3;
+
+    setText(DARK);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    const intro = `La version ${version || '—'} de ${produit} est disponible pour l'ensemble des points de vente. ` +
+                  `Elle apporte ${nEvo} nouvelle${nEvo > 1 ? 's' : ''} fonctionnalité${nEvo > 1 ? 's' : ''} ainsi que ` +
+                  `${nFix} correctif${nFix > 1 ? 's' : ''} pour votre outil de gestion commerciale.`;
+    const introLines = doc.splitTextToSize(intro, PW - ML - MR);
+    introLines.forEach(l => { doc.text(l, ML, y); y += 4.5; });
+    y += 4;
+
+    // Stats row
+    const allScopes = new Set();
+    [...data.evolutions, ...data.correctifs].forEach(x => {
+      const parts = (x.scope || '').split(/[&,]/).map(s => s.trim()).filter(Boolean);
+      parts.forEach(p => allScopes.add(p));
+    });
+
+    const statW = (PW - ML - MR - 10) / 3;
+    const statH = 20;
+    const statBoxes = [
+      { num: nEvo, label: 'NOUVELLES FONCTIONNALITES', bg: ROUGE_LIGHT, color: ROUGE_VIF },
+      { num: nFix, label: 'CORRECTIFS APPLIQUES',      bg: GOLD_LIGHT,  color: GOLD },
+      { num: allScopes.size, label: 'PERIMETRES CONCERNES', bg: BEIGE, color: BORDEAUX }
+    ];
+
+    statBoxes.forEach((s, i) => {
+      const bx = ML + i * (statW + 5);
+      setFill(s.bg);
+      setDraw(TAUPE_LIGHT);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(bx, y, statW, statH, 3, 3, 'FD');
+      setFill(s.color);
+      doc.rect(bx + 3, y, statW - 6, 0.8, 'F');
+      setText(s.color);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(26);
+      doc.text(String(s.num), bx + statW / 2, y + 11, { align: 'center' });
+      setText(DARK);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      const labelLines = doc.splitTextToSize(s.label, statW - 6);
+      let ly = y + 15;
+      labelLines.forEach(l => { doc.text(l, bx + statW / 2, ly, { align: 'center' }); ly += 2.8; });
+    });
+    y += statH + 8;
+
+    drawGoldRule(y, 0.5);
+    y += 6;
+
+    // ═════ EVOLUTIONS ═════
+    if (data.evolutions.length > 0) {
+      y = ensureSpace(y, 20);
+      drawSectionHeader(y, 'Nouvelles fonctionnalités', ROUGE_VIF);
+      y += 7;
+
+      for (let i = 0; i < data.evolutions.length; i += 2) {
+        const left = data.evolutions[i];
+        const right = data.evolutions[i + 1];
+        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W).h;
+        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W).h : 0;
+        const rowH = Math.max(lh, rh);
+
+        y = ensureSpace(y, rowH);
+
+        drawCard(ML, y, COL_W, left.title, left.description, left.scope, 'evo');
+        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right.title, right.description, right.scope, 'evo');
+        y += rowH + 4;
+      }
+    }
+
+    // Separator between sections
+    if (data.evolutions.length > 0 && data.correctifs.length > 0) {
+      y += 2;
+      y = ensureSpace(y, 12);
+      drawGoldRule(y, 0.5);
+      y += 6;
+    }
+
+    // ═════ CORRECTIFS ═════
+    if (data.correctifs.length > 0) {
+      y = ensureSpace(y, 20);
+      drawSectionHeader(y, 'Correctifs et améliorations', GOLD);
+      y += 7;
+
+      for (let i = 0; i < data.correctifs.length; i += 2) {
+        const left = data.correctifs[i];
+        const right = data.correctifs[i + 1];
+        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W).h;
+        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W).h : 0;
+        const rowH = Math.max(lh, rh);
+
+        y = ensureSpace(y, rowH);
+
+        drawCard(ML, y, COL_W, left.title, left.description, left.scope, 'fix');
+        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right.title, right.description, right.scope, 'fix');
+        y += rowH + 4;
+      }
+    }
+
+    // Empty state
+    if (data.evolutions.length === 0 && data.correctifs.length === 0) {
+      setText(TAUPE);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(11);
+      doc.text("Aucun contenu saisi pour cette version.", PW / 2, y + 20, { align: 'center' });
+    }
+
+    // Closing
+    y += 3;
+    y = ensureSpace(y, 12);
+    drawGoldRule(y, 0.35);
+    y += 4;
+    setText(TAUPE);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7.5);
+    doc.text("Pour toute question, contactez votre référent GESCOM PDV. Bonne utilisation\u00a0!", ML, y);
+
+    drawFooter(pageNum);
+
+    return doc.output('blob');
+  }
+
+})();
+</script>
+</body>
+</html>
