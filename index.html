@@ -1844,38 +1844,69 @@
       doc.text("Aucun contenu saisi pour cette version.", PW / 2, y + 20, { align: 'center' });
     }
 
-    // Closing — À propos reminder + courtesy
+    // ═════ CLOSING — "À propos" info + courtesy ═════
     y += 4;
-    y = ensureSpace(y, 22);
-    drawGoldRule(y, 0.5);
-    y += 5;
 
-    // "À propos" info box
+    // Pre-measure description so we size the box correctly
+    const descText = "Retrouvez l'ensemble des notes de version précédentes directement dans Mercalys, via le menu « À propos ».";
+    const iconColW = 10;  // space reserved for the left icon
+    const boxPadding = 5;
+    const innerTextW = (PW - ML - MR) - iconColW - 2 * boxPadding;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    const descLines = doc.splitTextToSize(descText, innerTextW);
+    const descBlockH = descLines.length * 3.5;
+
+    // Box height: top pad + title(4.5) + gap(2) + desc + bottom pad
+    const boxH = 4 + 4 + 2 + descBlockH + 4;
+
+    // Reserve space: gold rule (~7) + box + gap + courtesy line (~4)
+    y = ensureSpace(y, 7 + boxH + 7);
+
+    drawGoldRule(y, 0.5);
+    y += 6;
+
+    // Box background
+    const boxW = PW - ML - MR;
     setFill(BEIGE);
     setDraw(TAUPE_LIGHT);
     doc.setLineWidth(0.3);
-    const boxW = PW - ML - MR;
-    const boxH = 12;
-    doc.roundedRect(ML, y, boxW, boxH, 2, 2, 'FD');
+    doc.roundedRect(ML, y, boxW, boxH, 2.5, 2.5, 'FD');
 
+    // Info icon — manually drawn bordeaux circle with "i"
+    const iconCx = ML + 6.5;
+    const iconCy = y + boxH / 2;
+    setFill(BORDEAUX);
+    doc.circle(iconCx, iconCy, 3, 'F');
+    setText(WHITE);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('i', iconCx, iconCy + 1.2, { align: 'center' });
+
+    // Title and description
+    const textX = ML + iconColW + 2;
     setText(BORDEAUX);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.text(Historique complet des versions', ML + 4, y + 4.5);
+    doc.setFontSize(9.5);
+    doc.text('Historique complet des versions', textX, y + 6);
 
     setText(DARK);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text(
-      "Retrouvez l'ensemble des notes de version précédentes directement dans Mercalys, via le menu « À propos ».",
-      ML + 4, y + 9
-    );
-    y += boxH + 4;
+    let descY = y + 11;
+    descLines.forEach(line => {
+      doc.text(line, textX, descY);
+      descY += 3.5;
+    });
 
+    y += boxH + 5;
+
+    // Courtesy note
     setText(TAUPE);
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(7.5);
-    doc.text("Pour toute question, contactez votre référent GESCOM PDV. Bonne utilisation\u00a0!", ML, y);
+    doc.text("Pour toute question, contactez votre référent GESCOM PDV. Bonne utilisation !", ML, y);
 
     drawFooter(pageNum);
 
