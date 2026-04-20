@@ -277,10 +277,117 @@
   /* Hide scope rows when option is off */
   .hide-scope .scope-row { display: none; }
 
+  /* ═════ ITEM EXTRAS (image, link, pagebreak) ═════ */
+  .extras-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .extra-btn {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--bordeaux);
+    background: white;
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .extra-btn:hover {
+    border-color: var(--rouge-vif);
+    color: var(--rouge-bx);
+  }
+
+  .extra-btn.active {
+    background: var(--bordeaux);
+    color: white;
+    border-color: var(--bordeaux);
+  }
+
+  .extra-btn.active:hover {
+    background: var(--bordeaux-deep);
+    color: white;
+  }
+
+  .image-preview {
+    position: relative;
+    margin-top: 8px;
+    padding: 6px;
+    background: white;
+    border: 1px dashed var(--taupe);
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .image-preview img {
+    max-width: 100%;
+    max-height: 140px;
+    border-radius: 4px;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .image-preview-remove {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 22px; height: 22px;
+    background: rgba(45, 16, 24, 0.75);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    transition: background 0.15s;
+  }
+
+  .image-preview-remove:hover {
+    background: var(--rouge-vif);
+  }
+
+  .link-row {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr auto;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+  }
+
+  .link-row input {
+    background: white;
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .link-row button {
+    background: transparent;
+    border: 1px solid var(--taupe);
+    color: var(--taupe);
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+
+  .link-row button:hover {
+    border-color: var(--rouge-vif);
+    color: var(--rouge-bx);
+  }
+
   /* ═════ FIELDS (général) ═════ */
   .field-grid {
     display: grid;
-    grid-template-columns: 1.5fr 1fr 1fr;
+    grid-template-columns: 1.5fr 1fr;
     gap: 14px;
   }
 
@@ -690,10 +797,6 @@
           <label for="field-version">Version</label>
           <input type="text" id="field-version" placeholder="8.17.4">
         </div>
-        <div class="field">
-          <label for="field-date">Date</label>
-          <input type="text" id="field-date" placeholder="Mars 2026">
-        </div>
       </div>
 
       <div class="options-row">
@@ -703,6 +806,17 @@
           <span class="toggle-label">
             <strong>Afficher le périmètre sur chaque élément</strong>
             <small>Active les champs de périmètre et le compteur associé dans le PDF.</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="options-row">
+        <label class="toggle">
+          <input type="checkbox" id="toggle-pagebreak">
+          <span class="toggle-track"></span>
+          <span class="toggle-label">
+            <strong>Saut de page avant les correctifs</strong>
+            <small>Force la section « Correctifs et améliorations » à débuter sur une nouvelle page.</small>
           </span>
         </label>
       </div>
@@ -822,8 +936,8 @@
   const state = {
     produit: 'Mercalys',
     version: '8.17.4',
-    date: 'Mars 2026',
     showScope: false,
+    pageBreakBeforeFix: false,
     evolutions: [],
     correctifs: []
   };
@@ -870,13 +984,13 @@
     card.className = `item-card ${type}`;
     card.dataset.id = item.id;
 
-    // Header
+    // Header — number only, no "Nouveauté" label
     const header = document.createElement('div');
     header.className = 'item-header';
 
     const badge = document.createElement('span');
     badge.className = 'item-badge';
-    badge.textContent = (type === 'evo' ? '★ Nouveauté' : '✓ Correctif') + ' #' + (idx + 1);
+    badge.textContent = '#' + (idx + 1);
 
     const controls = document.createElement('div');
     controls.className = 'item-controls';
@@ -925,6 +1039,20 @@
     descInput.value = item.description || '';
     descInput.addEventListener('input', e => updateItem(type, item.id, 'description', e.target.value));
 
+    // Image preview (if present)
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'image-container';
+    if (item.image) {
+      imageContainer.appendChild(buildImagePreview(type, item));
+    }
+
+    // Link row (shown if linkUrl or linkLabel filled, or image present so user sees structure)
+    const linkContainer = document.createElement('div');
+    linkContainer.className = 'link-container';
+    if (item.linkLabel || item.linkUrl) {
+      linkContainer.appendChild(buildLinkRow(type, item));
+    }
+
     // Scope row
     const scopeRow = document.createElement('div');
     scopeRow.className = 'scope-row';
@@ -939,12 +1067,165 @@
     scopeRow.appendChild(scopeLabel);
     scopeRow.appendChild(scopeInput);
 
+    // Extras row — buttons to add image, link, page break
+    const extras = document.createElement('div');
+    extras.className = 'extras-row';
+
+    // Image button
+    const imgLabel = document.createElement('label');
+    imgLabel.className = 'extra-btn' + (item.image ? ' active' : '');
+    imgLabel.title = item.image ? 'Remplacer l\'image' : 'Ajouter une image';
+    imgLabel.innerHTML = (item.image ? '🖼 Image ajoutée' : '🖼 + Image');
+    const imgInput = document.createElement('input');
+    imgInput.type = 'file';
+    imgInput.accept = 'image/*';
+    imgInput.style.display = 'none';
+    imgInput.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (f) handleImageUpload(type, item.id, f);
+      e.target.value = '';
+    });
+    imgLabel.appendChild(imgInput);
+
+    // Link button
+    const linkBtn = document.createElement('button');
+    linkBtn.className = 'extra-btn' + ((item.linkLabel || item.linkUrl) ? ' active' : '');
+    linkBtn.textContent = (item.linkLabel || item.linkUrl) ? '🔗 Lien ajouté' : '🔗 + Lien cliquable';
+    linkBtn.title = 'Ajouter un lien cliquable (SAV, documentation…)';
+    linkBtn.addEventListener('click', () => {
+      if (item.linkLabel || item.linkUrl) {
+        // toggle off only if empty, else focus
+        const row = linkContainer.querySelector('.link-row');
+        if (row) {
+          row.querySelector('input').focus();
+        }
+      } else {
+        updateItem(type, item.id, 'linkLabel', 'Contacter le SAV');
+        // re-render to show the row
+      }
+    });
+
+    // Page break button removed - now handled at section level via general options
+
+    extras.appendChild(imgLabel);
+    extras.appendChild(linkBtn);
+
     card.appendChild(header);
     card.appendChild(titleInput);
     card.appendChild(descInput);
+    card.appendChild(imageContainer);
+    card.appendChild(linkContainer);
     card.appendChild(scopeRow);
+    card.appendChild(extras);
 
     return card;
+  }
+
+  function buildImagePreview(type, item) {
+    const wrap = document.createElement('div');
+    wrap.className = 'image-preview';
+    const img = document.createElement('img');
+    img.src = item.image;
+    img.alt = 'Aperçu';
+    const rm = document.createElement('button');
+    rm.className = 'image-preview-remove';
+    rm.title = 'Retirer l\'image';
+    rm.textContent = '×';
+    rm.addEventListener('click', () => {
+      const arr = type === 'evo' ? state.evolutions : state.correctifs;
+      const it = arr.find(x => x.id === item.id);
+      if (it) {
+        it.image = null;
+        it.imageFormat = null;
+        it.imageRatio = null;
+        renderAll();
+        schedulePreview();
+      }
+    });
+    wrap.appendChild(img);
+    wrap.appendChild(rm);
+    return wrap;
+  }
+
+  function buildLinkRow(type, item) {
+    const row = document.createElement('div');
+    row.className = 'link-row';
+
+    const labelInput = document.createElement('input');
+    labelInput.type = 'text';
+    labelInput.placeholder = 'Libellé (ex : Contacter le SAV)';
+    labelInput.value = item.linkLabel || '';
+    labelInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkLabel', e.target.value));
+
+    const urlInput = document.createElement('input');
+    urlInput.type = 'url';
+    urlInput.placeholder = 'https://…';
+    urlInput.value = item.linkUrl || '';
+    urlInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkUrl', e.target.value));
+
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.title = 'Supprimer le lien';
+    rm.textContent = '×';
+    rm.addEventListener('click', () => {
+      const arr = type === 'evo' ? state.evolutions : state.correctifs;
+      const it = arr.find(x => x.id === item.id);
+      if (it) {
+        it.linkLabel = '';
+        it.linkUrl = '';
+        renderAll();
+        schedulePreview();
+      }
+    });
+
+    row.appendChild(labelInput);
+    row.appendChild(urlInput);
+    row.appendChild(rm);
+    return row;
+  }
+
+  // Silent update — does not re-render editor, only preview
+  function updateItemSilent(type, id, field, value) {
+    const arr = type === 'evo' ? state.evolutions : state.correctifs;
+    const item = arr.find(x => x.id === id);
+    if (item) {
+      item[field] = value;
+      schedulePreview();
+    }
+  }
+
+  function handleImageUpload(type, id, file) {
+    if (!file.type.startsWith('image/')) {
+      toast('Le fichier doit être une image', true);
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast('Image trop volumineuse (max 3 Mo)', true);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      // Load to get dimensions
+      const img = new Image();
+      img.onload = () => {
+        const arr = type === 'evo' ? state.evolutions : state.correctifs;
+        const item = arr.find(x => x.id === id);
+        if (item) {
+          item.image = dataUrl;
+          // Determine format for jsPDF
+          const mime = file.type.toLowerCase();
+          item.imageFormat = mime.includes('png') ? 'PNG'
+                           : mime.includes('webp') ? 'WEBP'
+                           : 'JPEG';
+          item.imageRatio = img.naturalWidth / img.naturalHeight;
+          renderAll();
+          schedulePreview();
+        }
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
   }
 
   function updateCounts() {
@@ -955,8 +1236,8 @@
   function syncGeneralFields() {
     document.getElementById('field-produit').value = state.produit;
     document.getElementById('field-version').value = state.version;
-    document.getElementById('field-date').value = state.date;
     document.getElementById('toggle-scope').checked = state.showScope;
+    document.getElementById('toggle-pagebreak').checked = state.pageBreakBeforeFix;
     applyScopeVisibility();
   }
 
@@ -973,6 +1254,10 @@
     const item = arr.find(x => x.id === id);
     if (item) {
       item[field] = value;
+      // Fields that affect card layout require re-render
+      if (field === 'linkLabel' || field === 'linkUrl') {
+        renderAll();
+      }
       schedulePreview();
     }
   }
@@ -995,7 +1280,7 @@
   }
 
   function addItem(type) {
-    const item = { id: uid(), title: '', description: '', scope: '' };
+    const item = makeItem({});
     if (type === 'evo') state.evolutions.push(item);
     else state.correctifs.push(item);
     renderAll();
@@ -1014,19 +1299,44 @@
   function loadExample() {
     state.produit = 'Mercalys';
     state.version = '8.17.4';
-    state.date = 'Mars 2026';
-    state.evolutions = EXAMPLE_EVOLUTIONS.map(x => ({ id: uid(), ...x }));
-    state.correctifs = EXAMPLE_CORRECTIFS.map(x => ({ id: uid(), ...x }));
+    state.evolutions = EXAMPLE_EVOLUTIONS.map(x => makeItem(x));
+    state.correctifs = EXAMPLE_CORRECTIFS.map(x => makeItem(x));
     syncGeneralFields();
     renderAll();
     schedulePreview();
   }
 
+  function makeItem(src) {
+    return {
+      id: uid(),
+      title: src.title || '',
+      description: src.description || '',
+      scope: src.scope || '',
+      image: src.image || null,
+      imageFormat: src.imageFormat || null,
+      imageRatio: src.imageRatio || null,
+      linkLabel: src.linkLabel || '',
+      linkUrl: src.linkUrl || ''
+    };
+  }
+
+  function serializeItem(x) {
+    const o = { title: x.title, description: x.description, scope: x.scope };
+    if (x.image) { o.image = x.image; o.imageFormat = x.imageFormat; o.imageRatio = x.imageRatio; }
+    if (x.linkLabel) o.linkLabel = x.linkLabel;
+    if (x.linkUrl) o.linkUrl = x.linkUrl;
+    return o;
+  }
+
+  function deserializeItem(x) {
+    return makeItem(x);
+  }
+
   function resetAll() {
     state.produit = '';
     state.version = '';
-    state.date = '';
     state.showScope = false;
+    state.pageBreakBeforeFix = false;
     state.evolutions = [];
     state.correctifs = [];
     syncGeneralFields();
@@ -1075,10 +1385,10 @@
     const json = JSON.stringify({
       produit: state.produit,
       version: state.version,
-      date: state.date,
       showScope: state.showScope,
-      evolutions: state.evolutions.map(x => ({ title: x.title, description: x.description, scope: x.scope })),
-      correctifs: state.correctifs.map(x => ({ title: x.title, description: x.description, scope: x.scope }))
+      pageBreakBeforeFix: state.pageBreakBeforeFix,
+      evolutions: state.evolutions.map(serializeItem),
+      correctifs: state.correctifs.map(serializeItem)
     }, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1099,13 +1409,13 @@
         const data = JSON.parse(e.target.result);
         state.produit = data.produit || '';
         state.version = data.version || '';
-        state.date = data.date || '';
         state.showScope = !!data.showScope;
+        state.pageBreakBeforeFix = !!data.pageBreakBeforeFix;
         state.evolutions = Array.isArray(data.evolutions)
-          ? data.evolutions.map(x => ({ id: uid(), title: x.title || '', description: x.description || '', scope: x.scope || '' }))
+          ? data.evolutions.map(deserializeItem)
           : [];
         state.correctifs = Array.isArray(data.correctifs)
-          ? data.correctifs.map(x => ({ id: uid(), title: x.title || '', description: x.description || '', scope: x.scope || '' }))
+          ? data.correctifs.map(deserializeItem)
           : [];
         syncGeneralFields();
         renderAll();
@@ -1131,7 +1441,7 @@
   // EVENT BINDING
   // ════════════════════════════════════════════════════
 
-  ['produit', 'version', 'date'].forEach(f => {
+  ['produit', 'version'].forEach(f => {
     document.getElementById('field-' + f).addEventListener('input', e => {
       state[f] = e.target.value;
       schedulePreview();
@@ -1141,6 +1451,11 @@
   document.getElementById('toggle-scope').addEventListener('change', e => {
     state.showScope = e.target.checked;
     applyScopeVisibility();
+    schedulePreview();
+  });
+
+  document.getElementById('toggle-pagebreak').addEventListener('change', e => {
+    state.pageBreakBeforeFix = e.target.checked;
     schedulePreview();
   });
 
@@ -1203,7 +1518,6 @@
 
     const produit = data.produit || 'Produit';
     const version = data.version || '';
-    const date = data.date || '';
     const nEvo = data.evolutions.length;
     const nFix = data.correctifs.length;
 
@@ -1229,27 +1543,12 @@
         setText(WHITE);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(22);
-        doc.text(`${produit}${version ? ' ' + version : ''}`, ML, 15);
+        doc.text(`${produit}${version ? ' ' + version : ''}`, ML, 16);
 
         setText([212, 168, 83]);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
-        doc.text('Note de version — Points de vente', ML, 21);
-
-        if (date) {
-          setText([232, 213, 186]);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(10);
-          doc.text(date, PW - MR, 15, { align: 'right' });
-        }
-
-        setFill(ROUGE_VIF);
-        const pillW = 22, pillH = 5;
-        doc.roundedRect(PW - MR - pillW, 18, pillW, pillH, 2.5, 2.5, 'F');
-        setText(WHITE);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6);
-        doc.text('PRODUCTION', PW - MR - pillW / 2, 21.3, { align: 'center' });
+        doc.text('Note de version — Points de vente', ML, 22);
       } else {
         setText(WHITE);
         doc.setFont('helvetica', 'bold');
@@ -1259,12 +1558,6 @@
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.text('Note de version  ·  Suite', ML, 19);
-        if (date) {
-          setText([232, 213, 186]);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.text(date, PW - MR, 13, { align: 'right' });
-        }
       }
     }
 
@@ -1303,25 +1596,44 @@
       doc.text(text, ML + 5.5, y);
     }
 
-    function measureCardHeight(title, body, scope, width) {
+    function measureCardHeight(title, body, scope, width, item) {
       const contentW = width - 8;
       doc.setFontSize(9); doc.setFont('helvetica', 'bold');
       const titleLines = doc.splitTextToSize(title || 'Sans titre', contentW);
       doc.setFontSize(8); doc.setFont('helvetica', 'normal');
       const bodyLines = doc.splitTextToSize(body || '—', contentW);
-      // Base: top pad + badge + gap + title + gap + body + bottom pad
-      let h = 3.5 + 3 + 2 + titleLines.length * 3.8 + 2 + bodyLines.length * 3.5 + 3.5;
-      // Add scope row height only if scope is enabled
+      // Base: top pad + title + gap + body + bottom pad (no badge anymore)
+      let h = 4 + titleLines.length * 3.8 + 2 + bodyLines.length * 3.5 + 4;
+
+      // Image
+      let imgH = 0;
+      if (item && item.image && item.imageRatio) {
+        const imgW = contentW;
+        imgH = imgW / item.imageRatio;
+        const maxImgH = 45;
+        if (imgH > maxImgH) imgH = maxImgH;
+        h += 2.5 + imgH;
+      }
+
+      // Link
+      if (item && item.linkUrl && (item.linkLabel || item.linkUrl)) {
+        h += 2.5 + 4;
+      }
+
+      // Scope
       if (data.showScope) h += 2.5 + 3;
-      return { h, titleLines, bodyLines };
+
+      return { h, titleLines, bodyLines, imgH };
     }
 
-    function drawCard(x, y, w, title, body, scope, type) {
+    function drawCard(x, y, w, item, type) {
+      const title = item.title;
+      const body = item.description;
+      const scope = item.scope;
       const accentColor = type === 'evo' ? ROUGE_VIF : GOLD;
       const bgColor = type === 'evo' ? ROUGE_LIGHT : GOLD_LIGHT;
-      const badge = type === 'evo' ? 'NOUVEAUTE' : 'CORRECTIF';
 
-      const { h, titleLines, bodyLines } = measureCardHeight(title, body, scope, w);
+      const { h, titleLines, bodyLines, imgH } = measureCardHeight(title, body, scope, w, item);
 
       setFill(bgColor);
       setDraw([224, 214, 204]);
@@ -1332,28 +1644,56 @@
       doc.roundedRect(x, y, 1.8, h, 0.9, 0.9, 'F');
 
       const cx = x + 5;
-      let cy = y + 5.5;
+      const contentW = w - 8;
+      let cy = y + 6;
 
-      setText(accentColor);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.text(badge, cx, cy);
-      cy += 5;
-
+      // Title (no badge anymore)
       setText(BORDEAUX);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       titleLines.forEach(line => { doc.text(line, cx, cy); cy += 3.8; });
       cy += 1;
 
+      // Body
       setText(DARK);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       bodyLines.forEach(line => { doc.text(line, cx, cy); cy += 3.5; });
 
-      // Draw scope only if enabled
+      // Image
+      if (item.image && item.imageRatio && imgH > 0) {
+        cy += 2.5;
+        try {
+          doc.addImage(item.image, item.imageFormat || 'PNG', cx, cy, contentW, imgH);
+        } catch (e) {
+          console.warn('Image add failed:', e);
+        }
+        cy += imgH;
+      }
+
+      // Link (clickable)
+      if (item.linkUrl) {
+        cy += 2.5;
+        const label = (item.linkLabel || item.linkUrl).trim();
+        setText(BORDEAUX);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        const prefix = '→ ';
+        const fullText = prefix + label;
+        const textW = doc.getTextWidth(fullText);
+        // Underline
+        doc.text(fullText, cx, cy);
+        setDraw(BORDEAUX);
+        doc.setLineWidth(0.2);
+        doc.line(cx + doc.getTextWidth(prefix), cy + 0.5, cx + textW, cy + 0.5);
+        // Clickable zone
+        doc.link(cx, cy - 3, textW, 4, { url: item.linkUrl });
+        cy += 4;
+      }
+
+      // Scope
       if (data.showScope) {
-        cy += 1.5;
+        cy += 2.5;
         setFill(TAUPE);
         doc.triangle(cx, cy - 1.5, cx + 1.6, cy - 2.3, cx + 1.6, cy - 0.7, 'F');
         setText(TAUPE);
@@ -1383,7 +1723,7 @@
     setText(DARK);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
-    const intro = `La version ${version || '—'} de ${produit} est disponible pour l'ensemble des points de vente. ` +
+    const intro = `La version ${version || '—'} de ${produit} est déployée par vagues sur l'ensemble des points de vente. ` +
                   `Elle apporte ${nEvo} nouvelle${nEvo > 1 ? 's' : ''} fonctionnalité${nEvo > 1 ? 's' : ''} ainsi que ` +
                   `${nFix} correctif${nFix > 1 ? 's' : ''} pour votre outil de gestion commerciale.`;
     const introLines = doc.splitTextToSize(intro, PW - ML - MR);
@@ -1443,24 +1783,35 @@
       for (let i = 0; i < data.evolutions.length; i += 2) {
         const left = data.evolutions[i];
         const right = data.evolutions[i + 1];
-        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W).h;
-        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W).h : 0;
+
+        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W, left).h;
+        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W, right).h : 0;
         const rowH = Math.max(lh, rh);
 
         y = ensureSpace(y, rowH);
 
-        drawCard(ML, y, COL_W, left.title, left.description, left.scope, 'evo');
-        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right.title, right.description, right.scope, 'evo');
+        drawCard(ML, y, COL_W, left, 'evo');
+        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right, 'evo');
         y += rowH + 4;
       }
     }
 
-    // Separator between sections
+    // ═════ SECTION BREAK BETWEEN EVOLUTIONS AND CORRECTIFS ═════
     if (data.evolutions.length > 0 && data.correctifs.length > 0) {
-      y += 2;
-      y = ensureSpace(y, 12);
-      drawGoldRule(y, 0.5);
-      y += 6;
+      if (data.pageBreakBeforeFix) {
+        // Force new page before Correctifs section
+        drawFooter(pageNum);
+        doc.addPage();
+        pageNum++;
+        drawHeader(false);
+        y = MT + 2;
+      } else {
+        // Gold rule separator
+        y += 2;
+        y = ensureSpace(y, 12);
+        drawGoldRule(y, 0.5);
+        y += 6;
+      }
     }
 
     // ═════ CORRECTIFS ═════
@@ -1472,14 +1823,15 @@
       for (let i = 0; i < data.correctifs.length; i += 2) {
         const left = data.correctifs[i];
         const right = data.correctifs[i + 1];
-        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W).h;
-        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W).h : 0;
+
+        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W, left).h;
+        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W, right).h : 0;
         const rowH = Math.max(lh, rh);
 
         y = ensureSpace(y, rowH);
 
-        drawCard(ML, y, COL_W, left.title, left.description, left.scope, 'fix');
-        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right.title, right.description, right.scope, 'fix');
+        drawCard(ML, y, COL_W, left, 'fix');
+        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right, 'fix');
         y += rowH + 4;
       }
     }
@@ -1492,11 +1844,34 @@
       doc.text("Aucun contenu saisi pour cette version.", PW / 2, y + 20, { align: 'center' });
     }
 
-    // Closing
-    y += 3;
-    y = ensureSpace(y, 12);
-    drawGoldRule(y, 0.35);
+    // Closing — À propos reminder + courtesy
     y += 4;
+    y = ensureSpace(y, 22);
+    drawGoldRule(y, 0.5);
+    y += 5;
+
+    // "À propos" info box
+    setFill(BEIGE);
+    setDraw(TAUPE_LIGHT);
+    doc.setLineWidth(0.3);
+    const boxW = PW - ML - MR;
+    const boxH = 12;
+    doc.roundedRect(ML, y, boxW, boxH, 2, 2, 'FD');
+
+    setText(BORDEAUX);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text('ⓘ  Historique complet des versions', ML + 4, y + 4.5);
+
+    setText(DARK);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(
+      "Retrouvez l'ensemble des notes de version précédentes directement dans Mercalys, via le menu « À propos ».",
+      ML + 4, y + 9
+    );
+    y += boxH + 4;
+
     setText(TAUPE);
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(7.5);
