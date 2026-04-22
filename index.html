@@ -411,6 +411,7 @@
 
   .field input,
   .field textarea,
+  .field select,
   .item-title,
   .item-desc,
   .item-scope {
@@ -428,6 +429,7 @@
 
   .field input:focus,
   .field textarea:focus,
+  .field select:focus,
   .item-title:focus,
   .item-desc:focus,
   .item-scope:focus {
@@ -589,6 +591,68 @@
     color: var(--taupe);
     font-style: italic;
     font-size: 13px;
+  }
+
+  .inline-input {
+    width: 100%;
+    max-width: 320px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--bordeaux);
+    background: var(--beige-light);
+    border: 1.5px solid transparent;
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .inline-input:focus {
+    outline: none;
+    border-color: var(--rouge-vif);
+    background: white;
+  }
+
+  .range-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .range-row input[type="range"] { width: 100%; }
+
+  .range-value {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--bordeaux);
+    min-width: 54px;
+    text-align: right;
+  }
+
+  .recap-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .recap-row {
+    display: grid;
+    grid-template-columns: auto 1.3fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+    background: var(--beige-light);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 8px;
+  }
+
+  .recap-row label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--taupe);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 
   /* ═════ PREVIEW ═════ */
@@ -820,13 +884,52 @@
           </span>
         </label>
       </div>
+
+      <div class="options-row">
+        <label class="toggle">
+          <input type="checkbox" id="toggle-intro" checked>
+          <span class="toggle-track"></span>
+          <span class="toggle-label">
+            <strong>Afficher l’introduction</strong>
+            <small>Masque/affiche le paragraphe de synthèse en haut du PDF.</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="options-row">
+        <label class="toggle">
+          <input type="checkbox" id="toggle-closing" checked>
+          <span class="toggle-track"></span>
+          <span class="toggle-label">
+            <strong>Afficher le bloc de clôture</strong>
+            <small>Masque/affiche l’encart “Historique complet des versions”.</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label for="slider-spacing">Espacement vertical des blocs</label>
+        <div class="range-row">
+          <input type="range" min="0" max="14" step="1" id="slider-spacing">
+          <span class="range-value" id="spacing-value">4 mm</span>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Blocs récapitulatifs éditables</label>
+        <div class="recap-list" id="recap-list"></div>
+      </div>
     </section>
 
     <!-- Section Nouveautés -->
     <section class="section">
       <div class="section-head">
-        <h2><span class="section-accent rouge"></span>Nouvelles fonctionnalités</h2>
+        <h2><span class="section-accent rouge"></span><span id="title-evo-display">Nouvelles fonctionnalités</span></h2>
         <span class="count-pill" id="count-evo">0</span>
+      </div>
+      <div class="field">
+        <label for="field-title-evo">Titre libre de section</label>
+        <input class="inline-input" id="field-title-evo" type="text" placeholder="Nouvelles fonctionnalités">
       </div>
       <div class="items-list" id="evolutions-list"></div>
       <button class="add-btn" id="add-evo-btn">
@@ -837,8 +940,12 @@
     <!-- Section Correctifs -->
     <section class="section">
       <div class="section-head">
-        <h2><span class="section-accent"></span>Correctifs et améliorations</h2>
+        <h2><span class="section-accent"></span><span id="title-fix-display">Correctifs et améliorations</span></h2>
         <span class="count-pill" id="count-fix">0</span>
+      </div>
+      <div class="field">
+        <label for="field-title-fix">Titre libre de section</label>
+        <input class="inline-input" id="field-title-fix" type="text" placeholder="Correctifs et améliorations">
       </div>
       <div class="items-list" id="correctifs-list"></div>
       <button class="add-btn" id="add-fix-btn">
@@ -938,6 +1045,14 @@
     version: '8.17.4',
     showScope: false,
     pageBreakBeforeFix: false,
+    showIntro: true,
+    showClosing: true,
+    itemSpacing: 4,
+    sectionTitles: {
+      evo: 'Nouvelles fonctionnalités',
+      fix: 'Correctifs et améliorations'
+    },
+    recapBlocks: [],
     evolutions: [],
     correctifs: []
   };
@@ -946,15 +1061,75 @@
   let currentPdfUrl = null;
 
   function uid() { return 'id_' + Math.random().toString(36).slice(2, 10); }
+  function defaultRecapBlocks(evoCount, fixCount) {
+    return [
+      { id: uid(), label: 'Nouvelles fonctionnalités', value: String(evoCount || 0), color: '#FF2822', visible: true },
+      { id: uid(), label: 'Correctifs appliqués', value: String(fixCount || 0), color: '#D4A853', visible: true },
+      { id: uid(), label: 'Périmètres concernés', value: '', color: '#511227', visible: false }
+    ];
+  }
 
   // ════════════════════════════════════════════════════
   // RENDERING
   // ════════════════════════════════════════════════════
 
   function renderAll() {
+    renderRecapEditor();
     renderItems('evo');
     renderItems('fix');
     updateCounts();
+  }
+
+  function renderRecapEditor() {
+    const list = document.getElementById('recap-list');
+    if (!list) return;
+    list.innerHTML = '';
+    state.recapBlocks.forEach((block, idx) => {
+      const row = document.createElement('div');
+      row.className = 'recap-row';
+
+      const toggle = document.createElement('input');
+      toggle.type = 'checkbox';
+      toggle.checked = block.visible !== false;
+      toggle.title = 'Afficher / masquer ce bloc';
+      toggle.addEventListener('change', e => {
+        block.visible = e.target.checked;
+        schedulePreview();
+      });
+
+      const labelInput = document.createElement('input');
+      labelInput.type = 'text';
+      labelInput.value = block.label || '';
+      labelInput.placeholder = `Libellé bloc #${idx + 1}`;
+      labelInput.addEventListener('input', e => {
+        block.label = e.target.value;
+        schedulePreview();
+      });
+
+      const valueInput = document.createElement('input');
+      valueInput.type = 'text';
+      valueInput.value = block.value || '';
+      valueInput.placeholder = 'Valeur manuelle';
+      valueInput.addEventListener('input', e => {
+        block.value = e.target.value;
+        schedulePreview();
+      });
+
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = block.color || '#82072A';
+      colorInput.title = 'Couleur du bloc';
+      colorInput.addEventListener('input', e => {
+        block.color = e.target.value;
+        schedulePreview();
+      });
+
+      row.appendChild(toggle);
+      row.appendChild(labelInput);
+      row.appendChild(valueInput);
+      row.appendChild(colorInput);
+      list.appendChild(row);
+    });
   }
 
   function renderItems(type) {
@@ -1238,6 +1413,14 @@
     document.getElementById('field-version').value = state.version;
     document.getElementById('toggle-scope').checked = state.showScope;
     document.getElementById('toggle-pagebreak').checked = state.pageBreakBeforeFix;
+    document.getElementById('toggle-intro').checked = state.showIntro;
+    document.getElementById('toggle-closing').checked = state.showClosing;
+    document.getElementById('slider-spacing').value = state.itemSpacing;
+    document.getElementById('spacing-value').textContent = `${state.itemSpacing} mm`;
+    document.getElementById('field-title-evo').value = state.sectionTitles.evo;
+    document.getElementById('field-title-fix').value = state.sectionTitles.fix;
+    document.getElementById('title-evo-display').textContent = state.sectionTitles.evo;
+    document.getElementById('title-fix-display').textContent = state.sectionTitles.fix;
     applyScopeVisibility();
   }
 
@@ -1299,8 +1482,16 @@
   function loadExample() {
     state.produit = 'Mercalys';
     state.version = '8.17.4';
+    state.showIntro = true;
+    state.showClosing = true;
+    state.itemSpacing = 4;
+    state.sectionTitles = {
+      evo: 'Nouvelles fonctionnalités',
+      fix: 'Correctifs et améliorations'
+    };
     state.evolutions = EXAMPLE_EVOLUTIONS.map(x => makeItem(x));
     state.correctifs = EXAMPLE_CORRECTIFS.map(x => makeItem(x));
+    state.recapBlocks = defaultRecapBlocks(state.evolutions.length, state.correctifs.length);
     syncGeneralFields();
     renderAll();
     schedulePreview();
@@ -1337,6 +1528,14 @@
     state.version = '';
     state.showScope = false;
     state.pageBreakBeforeFix = false;
+    state.showIntro = true;
+    state.showClosing = true;
+    state.itemSpacing = 4;
+    state.sectionTitles = {
+      evo: 'Nouvelles fonctionnalités',
+      fix: 'Correctifs et améliorations'
+    };
+    state.recapBlocks = defaultRecapBlocks(0, 0);
     state.evolutions = [];
     state.correctifs = [];
     syncGeneralFields();
@@ -1387,6 +1586,11 @@
       version: state.version,
       showScope: state.showScope,
       pageBreakBeforeFix: state.pageBreakBeforeFix,
+      showIntro: state.showIntro,
+      showClosing: state.showClosing,
+      itemSpacing: state.itemSpacing,
+      sectionTitles: state.sectionTitles,
+      recapBlocks: state.recapBlocks,
       evolutions: state.evolutions.map(serializeItem),
       correctifs: state.correctifs.map(serializeItem)
     }, null, 2);
@@ -1411,12 +1615,28 @@
         state.version = data.version || '';
         state.showScope = !!data.showScope;
         state.pageBreakBeforeFix = !!data.pageBreakBeforeFix;
+        state.showIntro = data.showIntro !== false;
+        state.showClosing = data.showClosing !== false;
+        state.itemSpacing = typeof data.itemSpacing === 'number' ? data.itemSpacing : 4;
+        state.sectionTitles = {
+          evo: data.sectionTitles?.evo || 'Nouvelles fonctionnalités',
+          fix: data.sectionTitles?.fix || 'Correctifs et améliorations'
+        };
         state.evolutions = Array.isArray(data.evolutions)
           ? data.evolutions.map(deserializeItem)
           : [];
         state.correctifs = Array.isArray(data.correctifs)
           ? data.correctifs.map(deserializeItem)
           : [];
+        state.recapBlocks = Array.isArray(data.recapBlocks) && data.recapBlocks.length > 0
+          ? data.recapBlocks.map((x, idx) => ({
+              id: x.id || uid(),
+              label: x.label || `Bloc ${idx + 1}`,
+              value: x.value || '',
+              color: x.color || '#82072A',
+              visible: x.visible !== false
+            }))
+          : defaultRecapBlocks(state.evolutions.length, state.correctifs.length);
         syncGeneralFields();
         renderAll();
         schedulePreview();
@@ -1456,6 +1676,34 @@
 
   document.getElementById('toggle-pagebreak').addEventListener('change', e => {
     state.pageBreakBeforeFix = e.target.checked;
+    schedulePreview();
+  });
+
+  document.getElementById('toggle-intro').addEventListener('change', e => {
+    state.showIntro = e.target.checked;
+    schedulePreview();
+  });
+
+  document.getElementById('toggle-closing').addEventListener('change', e => {
+    state.showClosing = e.target.checked;
+    schedulePreview();
+  });
+
+  document.getElementById('slider-spacing').addEventListener('input', e => {
+    state.itemSpacing = Number(e.target.value) || 0;
+    document.getElementById('spacing-value').textContent = `${state.itemSpacing} mm`;
+    schedulePreview();
+  });
+
+  document.getElementById('field-title-evo').addEventListener('input', e => {
+    state.sectionTitles.evo = e.target.value || 'Nouvelles fonctionnalités';
+    document.getElementById('title-evo-display').textContent = state.sectionTitles.evo;
+    schedulePreview();
+  });
+
+  document.getElementById('field-title-fix').addEventListener('input', e => {
+    state.sectionTitles.fix = e.target.value || 'Correctifs et améliorations';
+    document.getElementById('title-fix-display').textContent = state.sectionTitles.fix;
     schedulePreview();
   });
 
@@ -1520,10 +1768,26 @@
     const version = data.version || '';
     const nEvo = data.evolutions.length;
     const nFix = data.correctifs.length;
+    const sectionEvoTitle = data.sectionTitles?.evo || 'Nouvelles fonctionnalités';
+    const sectionFixTitle = data.sectionTitles?.fix || 'Correctifs et améliorations';
+    const itemSpacing = Math.max(0, Number(data.itemSpacing) || 0);
 
     function setFill(c) { doc.setFillColor(c[0], c[1], c[2]); }
     function setDraw(c) { doc.setDrawColor(c[0], c[1], c[2]); }
     function setText(c) { doc.setTextColor(c[0], c[1], c[2]); }
+    function hexToRgb(hex) {
+      if (!hex || typeof hex !== 'string') return null;
+      const cleaned = hex.replace('#', '').trim();
+      if (!/^[0-9a-fA-F]{6}$/.test(cleaned)) return null;
+      return [
+        parseInt(cleaned.slice(0, 2), 16),
+        parseInt(cleaned.slice(2, 4), 16),
+        parseInt(cleaned.slice(4, 6), 16)
+      ];
+    }
+    function tint(rgb, ratio) {
+      return rgb.map(v => Math.round(v + (255 - v) * ratio));
+    }
 
     function drawHeader(isCover) {
       setFill(BORDEAUX_DEEP);
@@ -1723,26 +1987,32 @@
     setText(DARK);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
-    const intro = `La version ${version || '—'} de ${produit} est déployée par vagues sur l'ensemble des points de vente. ` +
-                  `Elle apporte ${nEvo} nouvelle${nEvo > 1 ? 's' : ''} fonctionnalité${nEvo > 1 ? 's' : ''} ainsi que ` +
-                  `${nFix} correctif${nFix > 1 ? 's' : ''} pour votre outil de gestion commerciale.`;
-    const introLines = doc.splitTextToSize(intro, PW - ML - MR);
-    introLines.forEach(l => { doc.text(l, ML, y); y += 4.5; });
-    y += 4;
+    if (data.showIntro !== false) {
+      const intro = `La version ${version || '—'} de ${produit} est déployée par vagues sur l'ensemble des points de vente. ` +
+                    `Elle apporte ${nEvo} nouvelle${nEvo > 1 ? 's' : ''} fonctionnalité${nEvo > 1 ? 's' : ''} ainsi que ` +
+                    `${nFix} correctif${nFix > 1 ? 's' : ''} pour votre outil de gestion commerciale.`;
+      const introLines = doc.splitTextToSize(intro, PW - ML - MR);
+      introLines.forEach(l => { doc.text(l, ML, y); y += 4.5; });
+      y += 4;
+    }
 
-    // Stats row — 2 or 3 boxes depending on showScope
-    const statBoxes = [
-      { num: nEvo, label: 'NOUVELLES FONCTIONNALITES', bg: ROUGE_LIGHT, color: ROUGE_VIF },
-      { num: nFix, label: 'CORRECTIFS APPLIQUES',      bg: GOLD_LIGHT,  color: GOLD }
-    ];
-
-    if (data.showScope) {
-      const allScopes = new Set();
-      [...data.evolutions, ...data.correctifs].forEach(x => {
-        const parts = (x.scope || '').split(/[&,]/).map(s => s.trim()).filter(Boolean);
-        parts.forEach(p => allScopes.add(p));
+    const statBoxes = (data.recapBlocks || [])
+      .filter(x => x && x.visible !== false)
+      .map(x => {
+        const color = hexToRgb(x.color) || BORDEAUX;
+        return {
+          num: String(x.value || '—'),
+          label: (x.label || 'Bloc').toUpperCase(),
+          bg: tint(color, 0.86),
+          color
+        };
       });
-      statBoxes.push({ num: allScopes.size, label: 'PERIMETRES CONCERNES', bg: BEIGE, color: BORDEAUX });
+
+    if (statBoxes.length === 0) {
+      statBoxes.push(
+        { num: String(nEvo), label: 'NOUVELLES FONCTIONNALITES', bg: ROUGE_LIGHT, color: ROUGE_VIF },
+        { num: String(nFix), label: 'CORRECTIFS APPLIQUES', bg: GOLD_LIGHT, color: GOLD }
+      );
     }
 
     const nBoxes = statBoxes.length;
@@ -1777,7 +2047,7 @@
     // ═════ EVOLUTIONS ═════
     if (data.evolutions.length > 0) {
       y = ensureSpace(y, 20);
-      drawSectionHeader(y, 'Nouvelles fonctionnalités', ROUGE_VIF);
+      drawSectionHeader(y, sectionEvoTitle, ROUGE_VIF);
       y += 7;
 
       for (let i = 0; i < data.evolutions.length; i += 2) {
@@ -1792,7 +2062,7 @@
 
         drawCard(ML, y, COL_W, left, 'evo');
         if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right, 'evo');
-        y += rowH + 4;
+        y += rowH + itemSpacing;
       }
     }
 
@@ -1817,7 +2087,7 @@
     // ═════ CORRECTIFS ═════
     if (data.correctifs.length > 0) {
       y = ensureSpace(y, 20);
-      drawSectionHeader(y, 'Correctifs et améliorations', GOLD);
+      drawSectionHeader(y, sectionFixTitle, GOLD);
       y += 7;
 
       for (let i = 0; i < data.correctifs.length; i += 2) {
@@ -1832,7 +2102,7 @@
 
         drawCard(ML, y, COL_W, left, 'fix');
         if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right, 'fix');
-        y += rowH + 4;
+        y += rowH + itemSpacing;
       }
     }
 
@@ -1845,68 +2115,61 @@
     }
 
     // ═════ CLOSING — "À propos" info + courtesy ═════
-    y += 4;
+    y += itemSpacing;
 
-    // Pre-measure description so we size the box correctly
-    const descText = "Retrouvez l'ensemble des notes de version précédentes directement dans Mercalys, via le menu « À propos ».";
-    const iconColW = 10;  // space reserved for the left icon
-    const boxPadding = 5;
-    const innerTextW = (PW - ML - MR) - iconColW - 2 * boxPadding;
+    if (data.showClosing !== false) {
+      // Pre-measure description so we size the box correctly
+      const descText = "Retrouvez l'ensemble des notes de version précédentes directement dans Mercalys, via le menu « À propos ».";
+      const iconColW = 10;
+      const boxPadding = 5;
+      const innerTextW = (PW - ML - MR) - iconColW - 2 * boxPadding;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    const descLines = doc.splitTextToSize(descText, innerTextW);
-    const descBlockH = descLines.length * 3.5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      const descLines = doc.splitTextToSize(descText, innerTextW);
+      const descBlockH = descLines.length * 3.5;
+      const boxH = 4 + 4 + 2 + descBlockH + 4;
+      y = ensureSpace(y, 7 + boxH + 7);
 
-    // Box height: top pad + title(4.5) + gap(2) + desc + bottom pad
-    const boxH = 4 + 4 + 2 + descBlockH + 4;
+      drawGoldRule(y, 0.5);
+      y += 6;
 
-    // Reserve space: gold rule (~7) + box + gap + courtesy line (~4)
-    y = ensureSpace(y, 7 + boxH + 7);
+      const boxW = PW - ML - MR;
+      setFill(BEIGE);
+      setDraw(TAUPE_LIGHT);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(ML, y, boxW, boxH, 2.5, 2.5, 'FD');
 
-    drawGoldRule(y, 0.5);
-    y += 6;
+      const iconCx = ML + 6.5;
+      const iconCy = y + boxH / 2;
+      setFill(BORDEAUX);
+      doc.circle(iconCx, iconCy, 3, 'F');
+      setText(WHITE);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('i', iconCx, iconCy + 1.2, { align: 'center' });
 
-    // Box background
-    const boxW = PW - ML - MR;
-    setFill(BEIGE);
-    setDraw(TAUPE_LIGHT);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, boxW, boxH, 2.5, 2.5, 'FD');
+      const textX = ML + iconColW + 2;
+      setText(BORDEAUX);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.text('Historique complet des versions', textX, y + 6);
 
-    // Info icon — manually drawn bordeaux circle with "i"
-    const iconCx = ML + 6.5;
-    const iconCy = y + boxH / 2;
-    setFill(BORDEAUX);
-    doc.circle(iconCx, iconCy, 3, 'F');
-    setText(WHITE);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('i', iconCx, iconCy + 1.2, { align: 'center' });
+      setText(DARK);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      let descY = y + 11;
+      descLines.forEach(line => {
+        doc.text(line, textX, descY);
+        descY += 3.5;
+      });
 
-    // Title and description
-    const textX = ML + iconColW + 2;
-    setText(BORDEAUX);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.text('Historique complet des versions', textX, y + 6);
-
-    setText(DARK);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    let descY = y + 11;
-    descLines.forEach(line => {
-      doc.text(line, textX, descY);
-      descY += 3.5;
-    });
-
-    y += boxH + 5;
-
-    // Courtesy note
-    setText(TAUPE);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7.5);
-    doc.text("Pour toute question, contactez votre référent GESCOM PDV. Bonne utilisation !", ML, y);
+      y += boxH + 5;
+      setText(TAUPE);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7.5);
+      doc.text("Pour toute question, contactez votre référent GESCOM PDV. Bonne utilisation !", ML, y);
+    }
 
     drawFooter(pageNum);
 
