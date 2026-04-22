@@ -411,6 +411,7 @@
 
   .field input,
   .field textarea,
+  .field select,
   .item-title,
   .item-desc,
   .item-scope {
@@ -428,6 +429,7 @@
 
   .field input:focus,
   .field textarea:focus,
+  .field select:focus,
   .item-title:focus,
   .item-desc:focus,
   .item-scope:focus {
@@ -492,6 +494,109 @@
   .item-controls {
     display: flex;
     gap: 4px;
+    align-items: center;
+  }
+
+  .color-chip-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--border-soft);
+    background: white;
+    cursor: pointer;
+    display: inline-grid;
+    place-items: center;
+    font-size: 12px;
+    color: var(--taupe);
+    position: relative;
+  }
+
+  .color-chip-btn .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.12);
+  }
+
+  .color-chip-btn.inherit .dot {
+    background: repeating-linear-gradient(
+      45deg,
+      #ffffff,
+      #ffffff 3px,
+      #ece6dd 3px,
+      #ece6dd 6px
+    );
+  }
+
+  .section-color-trigger {
+    margin-left: auto;
+  }
+
+  .color-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    width: 220px;
+    background: white;
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(45, 16, 24, 0.18);
+    padding: 10px;
+    display: none;
+  }
+
+  .color-popover.open { display: block; }
+
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .color-opt {
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    height: 34px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .color-opt.active::after {
+    content: '✓';
+    position: absolute;
+    right: 5px;
+    top: 2px;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  }
+
+  .color-reset {
+    margin-top: 8px;
+    width: 100%;
+    border: 1px solid var(--border-soft);
+    background: var(--beige-light);
+    color: var(--bordeaux);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .custom-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .custom-section-card {
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 12px;
+    background: var(--beige-light);
   }
 
   .icon-btn {
@@ -589,6 +694,68 @@
     color: var(--taupe);
     font-style: italic;
     font-size: 13px;
+  }
+
+  .inline-input {
+    width: 100%;
+    max-width: 320px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--bordeaux);
+    background: var(--beige-light);
+    border: 1.5px solid transparent;
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .inline-input:focus {
+    outline: none;
+    border-color: var(--rouge-vif);
+    background: white;
+  }
+
+  .range-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .range-row input[type="range"] { width: 100%; }
+
+  .range-value {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--bordeaux);
+    min-width: 54px;
+    text-align: right;
+  }
+
+  .recap-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .recap-row {
+    display: grid;
+    grid-template-columns: auto 1.3fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+    background: var(--beige-light);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 8px;
+  }
+
+  .recap-row label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--taupe);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 
   /* ═════ PREVIEW ═════ */
@@ -774,6 +941,9 @@
       <button class="secondary-btn" id="import-btn" title="Importer un brouillon JSON">
         📂 Importer
       </button>
+      <button class="secondary-btn" id="download-html-btn" title="Télécharger ce générateur en fichier HTML">
+        🌐 Télécharger HTML
+      </button>
       <button class="secondary-btn" id="example-btn" title="Charger l'exemple Mercalys 8.17.4">
         ✨ Exemple
       </button>
@@ -820,13 +990,53 @@
           </span>
         </label>
       </div>
+
+      <div class="options-row">
+        <label class="toggle">
+          <input type="checkbox" id="toggle-intro" checked>
+          <span class="toggle-track"></span>
+          <span class="toggle-label">
+            <strong>Afficher l’introduction</strong>
+            <small>Masque/affiche le paragraphe de synthèse en haut du PDF.</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="options-row">
+        <label class="toggle">
+          <input type="checkbox" id="toggle-closing" checked>
+          <span class="toggle-track"></span>
+          <span class="toggle-label">
+            <strong>Afficher le bloc de clôture</strong>
+            <small>Masque/affiche l’encart “Historique complet des versions”.</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label for="slider-spacing">Espacement vertical des blocs</label>
+        <div class="range-row">
+          <input type="range" min="0" max="14" step="1" id="slider-spacing">
+          <span class="range-value" id="spacing-value">4 mm</span>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Blocs récapitulatifs éditables</label>
+        <div class="recap-list" id="recap-list"></div>
+      </div>
     </section>
 
     <!-- Section Nouveautés -->
     <section class="section">
       <div class="section-head">
-        <h2><span class="section-accent rouge"></span>Nouvelles fonctionnalités</h2>
+        <h2><span class="section-accent rouge"></span><span id="title-evo-display">Nouvelles fonctionnalités</span></h2>
+        <div class="section-color-trigger" id="section-color-trigger-evo"></div>
         <span class="count-pill" id="count-evo">0</span>
+      </div>
+      <div class="field">
+        <label for="field-title-evo">Titre libre de section</label>
+        <input class="inline-input" id="field-title-evo" type="text" placeholder="Nouvelles fonctionnalités">
       </div>
       <div class="items-list" id="evolutions-list"></div>
       <button class="add-btn" id="add-evo-btn">
@@ -837,12 +1047,27 @@
     <!-- Section Correctifs -->
     <section class="section">
       <div class="section-head">
-        <h2><span class="section-accent"></span>Correctifs et améliorations</h2>
+        <h2><span class="section-accent"></span><span id="title-fix-display">Correctifs et améliorations</span></h2>
+        <div class="section-color-trigger" id="section-color-trigger-fix"></div>
         <span class="count-pill" id="count-fix">0</span>
+      </div>
+      <div class="field">
+        <label for="field-title-fix">Titre libre de section</label>
+        <input class="inline-input" id="field-title-fix" type="text" placeholder="Correctifs et améliorations">
       </div>
       <div class="items-list" id="correctifs-list"></div>
       <button class="add-btn" id="add-fix-btn">
         <span class="add-btn-plus">+</span> Ajouter un correctif
+      </button>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2><span class="section-accent"></span>Sections supplémentaires</h2>
+      </div>
+      <div class="custom-sections" id="custom-sections"></div>
+      <button class="add-btn" id="add-custom-section-btn">
+        <span class="add-btn-plus">+</span> Ajouter une section
       </button>
     </section>
 
@@ -933,11 +1158,35 @@
   // STATE
   // ════════════════════════════════════════════════════
 
+  const COLOR_PALETTE = {
+    rouge: { name: 'Rouge', dark: [255, 40, 34], light: [252, 234, 233] },
+    bordeaux: { name: 'Bordeaux', dark: [130, 7, 42], light: [248, 232, 236] },
+    or: { name: 'Or', dark: [212, 168, 83], light: [245, 237, 216] },
+    taupe: { name: 'Taupe', dark: [160, 134, 112], light: [242, 236, 229] },
+    sauge: { name: 'Sauge', dark: [114, 140, 120], light: [233, 241, 236] },
+    ardoise: { name: 'Ardoise', dark: [93, 109, 130], light: [232, 237, 245] },
+    terracotta: { name: 'Terracotta', dark: [196, 101, 74], light: [250, 232, 226] },
+    prune: { name: 'Prune', dark: [108, 62, 102], light: [241, 232, 242] }
+  };
+
   const state = {
     produit: 'Mercalys',
     version: '8.17.4',
     showScope: false,
     pageBreakBeforeFix: false,
+    showIntro: true,
+    showClosing: true,
+    itemSpacing: 4,
+    sectionTitles: {
+      evo: 'Nouvelles fonctionnalités',
+      fix: 'Correctifs et améliorations'
+    },
+    sectionColors: {
+      evo: 'rouge',
+      fix: 'or'
+    },
+    customSections: [],
+    recapBlocks: [],
     evolutions: [],
     correctifs: []
   };
@@ -946,15 +1195,235 @@
   let currentPdfUrl = null;
 
   function uid() { return 'id_' + Math.random().toString(36).slice(2, 10); }
+  function rgbToCss(rgb) { return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`; }
+  function getPalette(key, fallback) {
+    return COLOR_PALETTE[key] || COLOR_PALETTE[fallback || 'rouge'];
+  }
+  function defaultRecapBlocks(evoCount, fixCount) {
+    return [
+      { id: uid(), label: 'Nouvelles fonctionnalités', value: String(evoCount || 0), colorKey: 'rouge', visible: true },
+      { id: uid(), label: 'Correctifs appliqués', value: String(fixCount || 0), colorKey: 'or', visible: true },
+      { id: uid(), label: 'Périmètres concernés', value: '', color: '#511227', visible: false }
+    ];
+  }
 
   // ════════════════════════════════════════════════════
   // RENDERING
   // ════════════════════════════════════════════════════
 
   function renderAll() {
+    renderRecapEditor();
+    renderSectionColorTriggers();
     renderItems('evo');
     renderItems('fix');
+    renderCustomSections();
     updateCounts();
+  }
+
+  function renderRecapEditor() {
+    const list = document.getElementById('recap-list');
+    if (!list) return;
+    list.innerHTML = '';
+    state.recapBlocks.forEach((block, idx) => {
+      const row = document.createElement('div');
+      row.className = 'recap-row';
+
+      const toggle = document.createElement('input');
+      toggle.type = 'checkbox';
+      toggle.checked = block.visible !== false;
+      toggle.title = 'Afficher / masquer ce bloc';
+      toggle.addEventListener('change', e => {
+        block.visible = e.target.checked;
+        schedulePreview();
+      });
+
+      const labelInput = document.createElement('input');
+      labelInput.type = 'text';
+      labelInput.value = block.label || '';
+      labelInput.placeholder = `Libellé bloc #${idx + 1}`;
+      labelInput.addEventListener('input', e => {
+        block.label = e.target.value;
+        schedulePreview();
+      });
+
+      const valueInput = document.createElement('input');
+      valueInput.type = 'text';
+      valueInput.value = block.value || '';
+      valueInput.placeholder = 'Valeur manuelle';
+      valueInput.addEventListener('input', e => {
+        block.value = e.target.value;
+        schedulePreview();
+      });
+
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      const palette = block.colorKey ? getPalette(block.colorKey, 'bordeaux') : null;
+      colorInput.value = palette ? rgbToHex(palette.dark) : (block.color || '#82072A');
+      colorInput.title = 'Couleur du bloc';
+      colorInput.addEventListener('input', e => {
+        block.color = e.target.value;
+        block.colorKey = null;
+        schedulePreview();
+      });
+
+      row.appendChild(toggle);
+      row.appendChild(labelInput);
+      row.appendChild(valueInput);
+      row.appendChild(colorInput);
+      list.appendChild(row);
+    });
+  }
+
+  function renderSectionColorTriggers() {
+    [['evo', 'section-color-trigger-evo'], ['fix', 'section-color-trigger-fix']].forEach(([key, id]) => {
+      const host = document.getElementById(id);
+      if (!host) return;
+      host.innerHTML = '';
+      host.appendChild(buildColorPicker({
+        value: state.sectionColors[key],
+        onSelect: (colorKey) => {
+          state.sectionColors[key] = colorKey;
+          syncRecapColors();
+          renderAll();
+          schedulePreview();
+        },
+        allowReset: false
+      }));
+    });
+  }
+
+  function renderCustomSections() {
+    const host = document.getElementById('custom-sections');
+    if (!host) return;
+    host.innerHTML = '';
+    state.customSections.forEach((section, idx) => {
+      const card = document.createElement('div');
+      card.className = 'custom-section-card';
+
+      const top = document.createElement('div');
+      top.className = 'item-header';
+      const title = document.createElement('input');
+      title.className = 'inline-input';
+      title.value = section.title || '';
+      title.placeholder = 'Titre de section';
+      title.addEventListener('input', e => {
+        section.title = e.target.value;
+        schedulePreview();
+      });
+      const controls = document.createElement('div');
+      controls.className = 'item-controls';
+      controls.appendChild(buildColorPicker({
+        value: section.colorKey || 'ardoise',
+        onSelect: (k) => { section.colorKey = k; schedulePreview(); },
+        allowReset: false
+      }));
+      const del = document.createElement('button');
+      del.className = 'icon-btn danger';
+      del.textContent = '×';
+      del.title = 'Supprimer la section';
+      del.addEventListener('click', () => {
+        state.customSections.splice(idx, 1);
+        renderAll();
+        schedulePreview();
+      });
+      controls.appendChild(del);
+      top.appendChild(title);
+      top.appendChild(controls);
+      card.appendChild(top);
+
+      const list = document.createElement('div');
+      list.className = 'items-list';
+      if (!section.items || section.items.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = 'Aucun élément dans cette section.';
+        list.appendChild(empty);
+      } else {
+        section.items.forEach((item, itemIdx) => {
+          list.appendChild(createItemCard(item, 'custom', itemIdx, section.items.length, section.id));
+        });
+      }
+      card.appendChild(list);
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'add-btn';
+      addBtn.innerHTML = '<span class="add-btn-plus">+</span> Ajouter un élément';
+      addBtn.addEventListener('click', () => addItem('custom', section.id));
+      card.appendChild(addBtn);
+
+      host.appendChild(card);
+    });
+  }
+
+  function buildColorPicker({ value, onSelect, allowReset, onReset }) {
+    const wrap = document.createElement('div');
+    wrap.className = 'color-chip-btn' + (!value ? ' inherit' : '');
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    if (value && COLOR_PALETTE[value]) dot.style.background = rgbToCss(COLOR_PALETTE[value].dark);
+    if (!value) {
+      dot.textContent = '—';
+      dot.style.display = 'grid';
+      dot.style.placeItems = 'center';
+      dot.style.fontSize = '10px';
+      dot.style.color = '#7d6a59';
+    }
+    wrap.appendChild(dot);
+
+    const pop = document.createElement('div');
+    pop.className = 'color-popover';
+    const grid = document.createElement('div');
+    grid.className = 'color-grid';
+    Object.entries(COLOR_PALETTE).forEach(([key, c]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'color-opt' + (value === key ? ' active' : '');
+      btn.style.background = `linear-gradient(180deg, ${rgbToCss(c.light)} 0%, ${rgbToCss(c.dark)} 100%)`;
+      btn.title = c.name;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onSelect(key);
+        pop.classList.remove('open');
+      });
+      grid.appendChild(btn);
+    });
+    pop.appendChild(grid);
+    if (allowReset) {
+      const reset = document.createElement('button');
+      reset.type = 'button';
+      reset.className = 'color-reset';
+      reset.textContent = '↻ Couleur de la section';
+      reset.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (onReset) onReset();
+        pop.classList.remove('open');
+      });
+      pop.appendChild(reset);
+    }
+
+    wrap.appendChild(pop);
+    wrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.color-popover.open').forEach(x => x.classList.remove('open'));
+      pop.classList.toggle('open');
+    });
+    return wrap;
+  }
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.color-popover.open').forEach(x => x.classList.remove('open'));
+  });
+
+  function rgbToHex(rgb) {
+    const toHex = (n) => n.toString(16).padStart(2, '0');
+    return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
+  }
+
+  function getItemsArray(type, sectionId) {
+    if (type === 'evo') return state.evolutions;
+    if (type === 'fix') return state.correctifs;
+    const sec = state.customSections.find(s => s.id === sectionId);
+    return sec ? sec.items : [];
   }
 
   function renderItems(type) {
@@ -975,11 +1444,11 @@
     }
 
     items.forEach((item, idx) => {
-      container.appendChild(createItemCard(item, type, idx, items.length));
+      container.appendChild(createItemCard(item, type, idx, items.length, null));
     });
   }
 
-  function createItemCard(item, type, idx, total) {
+  function createItemCard(item, type, idx, total, sectionId) {
     const card = document.createElement('div');
     card.className = `item-card ${type}`;
     card.dataset.id = item.id;
@@ -1001,7 +1470,7 @@
     upBtn.textContent = '↑';
     upBtn.disabled = idx === 0;
     if (idx === 0) upBtn.style.opacity = '0.3';
-    upBtn.addEventListener('click', () => moveItem(type, item.id, -1));
+    upBtn.addEventListener('click', () => moveItem(type, item.id, -1, sectionId));
 
     const downBtn = document.createElement('button');
     downBtn.className = 'icon-btn';
@@ -1009,14 +1478,22 @@
     downBtn.textContent = '↓';
     downBtn.disabled = idx === total - 1;
     if (idx === total - 1) downBtn.style.opacity = '0.3';
-    downBtn.addEventListener('click', () => moveItem(type, item.id, 1));
+    downBtn.addEventListener('click', () => moveItem(type, item.id, 1, sectionId));
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'icon-btn danger';
     deleteBtn.title = 'Supprimer';
     deleteBtn.textContent = '×';
-    deleteBtn.addEventListener('click', () => deleteItem(type, item.id));
+    deleteBtn.addEventListener('click', () => deleteItem(type, item.id, sectionId));
 
+    const colorBtn = buildColorPicker({
+      value: item.colorKey || null,
+      onSelect: (k) => updateItem(type, item.id, 'colorKey', k, sectionId),
+      allowReset: true,
+      onReset: () => updateItem(type, item.id, 'colorKey', null, sectionId)
+    });
+
+    controls.appendChild(colorBtn);
     controls.appendChild(upBtn);
     controls.appendChild(downBtn);
     controls.appendChild(deleteBtn);
@@ -1029,7 +1506,7 @@
     titleInput.className = 'item-title';
     titleInput.placeholder = 'Titre (max ~55 caractères)';
     titleInput.value = item.title || '';
-    titleInput.addEventListener('input', e => updateItem(type, item.id, 'title', e.target.value));
+    titleInput.addEventListener('input', e => updateItem(type, item.id, 'title', e.target.value, sectionId));
 
     // Description
     const descInput = document.createElement('textarea');
@@ -1037,20 +1514,20 @@
     descInput.placeholder = 'Description orientée point de vente (1 à 3 phrases)';
     descInput.rows = 3;
     descInput.value = item.description || '';
-    descInput.addEventListener('input', e => updateItem(type, item.id, 'description', e.target.value));
+    descInput.addEventListener('input', e => updateItem(type, item.id, 'description', e.target.value, sectionId));
 
     // Image preview (if present)
     const imageContainer = document.createElement('div');
     imageContainer.className = 'image-container';
     if (item.image) {
-      imageContainer.appendChild(buildImagePreview(type, item));
+      imageContainer.appendChild(buildImagePreview(type, item, sectionId));
     }
 
     // Link row (shown if linkUrl or linkLabel filled, or image present so user sees structure)
     const linkContainer = document.createElement('div');
     linkContainer.className = 'link-container';
     if (item.linkLabel || item.linkUrl) {
-      linkContainer.appendChild(buildLinkRow(type, item));
+      linkContainer.appendChild(buildLinkRow(type, item, sectionId));
     }
 
     // Scope row
@@ -1063,7 +1540,7 @@
     scopeInput.className = 'item-scope';
     scopeInput.placeholder = 'ex : France, Belgique, Tous pays…';
     scopeInput.value = item.scope || '';
-    scopeInput.addEventListener('input', e => updateItem(type, item.id, 'scope', e.target.value));
+    scopeInput.addEventListener('input', e => updateItem(type, item.id, 'scope', e.target.value, sectionId));
     scopeRow.appendChild(scopeLabel);
     scopeRow.appendChild(scopeInput);
 
@@ -1082,7 +1559,7 @@
     imgInput.style.display = 'none';
     imgInput.addEventListener('change', e => {
       const f = e.target.files[0];
-      if (f) handleImageUpload(type, item.id, f);
+      if (f) handleImageUpload(type, item.id, f, sectionId);
       e.target.value = '';
     });
     imgLabel.appendChild(imgInput);
@@ -1100,7 +1577,7 @@
           row.querySelector('input').focus();
         }
       } else {
-        updateItem(type, item.id, 'linkLabel', 'Contacter le SAV');
+        updateItem(type, item.id, 'linkLabel', 'Contacter le SAV', sectionId);
         // re-render to show the row
       }
     });
@@ -1121,7 +1598,7 @@
     return card;
   }
 
-  function buildImagePreview(type, item) {
+  function buildImagePreview(type, item, sectionId) {
     const wrap = document.createElement('div');
     wrap.className = 'image-preview';
     const img = document.createElement('img');
@@ -1132,7 +1609,7 @@
     rm.title = 'Retirer l\'image';
     rm.textContent = '×';
     rm.addEventListener('click', () => {
-      const arr = type === 'evo' ? state.evolutions : state.correctifs;
+      const arr = getItemsArray(type, sectionId);
       const it = arr.find(x => x.id === item.id);
       if (it) {
         it.image = null;
@@ -1147,7 +1624,7 @@
     return wrap;
   }
 
-  function buildLinkRow(type, item) {
+  function buildLinkRow(type, item, sectionId) {
     const row = document.createElement('div');
     row.className = 'link-row';
 
@@ -1155,20 +1632,20 @@
     labelInput.type = 'text';
     labelInput.placeholder = 'Libellé (ex : Contacter le SAV)';
     labelInput.value = item.linkLabel || '';
-    labelInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkLabel', e.target.value));
+    labelInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkLabel', e.target.value, sectionId));
 
     const urlInput = document.createElement('input');
     urlInput.type = 'url';
     urlInput.placeholder = 'https://…';
     urlInput.value = item.linkUrl || '';
-    urlInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkUrl', e.target.value));
+    urlInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkUrl', e.target.value, sectionId));
 
     const rm = document.createElement('button');
     rm.type = 'button';
     rm.title = 'Supprimer le lien';
     rm.textContent = '×';
     rm.addEventListener('click', () => {
-      const arr = type === 'evo' ? state.evolutions : state.correctifs;
+      const arr = getItemsArray(type, sectionId);
       const it = arr.find(x => x.id === item.id);
       if (it) {
         it.linkLabel = '';
@@ -1185,8 +1662,8 @@
   }
 
   // Silent update — does not re-render editor, only preview
-  function updateItemSilent(type, id, field, value) {
-    const arr = type === 'evo' ? state.evolutions : state.correctifs;
+  function updateItemSilent(type, id, field, value, sectionId) {
+    const arr = getItemsArray(type, sectionId);
     const item = arr.find(x => x.id === id);
     if (item) {
       item[field] = value;
@@ -1194,7 +1671,7 @@
     }
   }
 
-  function handleImageUpload(type, id, file) {
+  function handleImageUpload(type, id, file, sectionId) {
     if (!file.type.startsWith('image/')) {
       toast('Le fichier doit être une image', true);
       return;
@@ -1209,7 +1686,7 @@
       // Load to get dimensions
       const img = new Image();
       img.onload = () => {
-        const arr = type === 'evo' ? state.evolutions : state.correctifs;
+        const arr = getItemsArray(type, sectionId);
         const item = arr.find(x => x.id === id);
         if (item) {
           item.image = dataUrl;
@@ -1233,11 +1710,25 @@
     document.getElementById('count-fix').textContent = state.correctifs.length;
   }
 
+  function syncRecapColors() {
+    if (!state.recapBlocks[0]) return;
+    if (state.recapBlocks[0]) state.recapBlocks[0].colorKey = state.sectionColors.evo;
+    if (state.recapBlocks[1]) state.recapBlocks[1].colorKey = state.sectionColors.fix;
+  }
+
   function syncGeneralFields() {
     document.getElementById('field-produit').value = state.produit;
     document.getElementById('field-version').value = state.version;
     document.getElementById('toggle-scope').checked = state.showScope;
     document.getElementById('toggle-pagebreak').checked = state.pageBreakBeforeFix;
+    document.getElementById('toggle-intro').checked = state.showIntro;
+    document.getElementById('toggle-closing').checked = state.showClosing;
+    document.getElementById('slider-spacing').value = state.itemSpacing;
+    document.getElementById('spacing-value').textContent = `${state.itemSpacing} mm`;
+    document.getElementById('field-title-evo').value = state.sectionTitles.evo;
+    document.getElementById('field-title-fix').value = state.sectionTitles.fix;
+    document.getElementById('title-evo-display').textContent = state.sectionTitles.evo;
+    document.getElementById('title-fix-display').textContent = state.sectionTitles.fix;
     applyScopeVisibility();
   }
 
@@ -1249,8 +1740,8 @@
   // STATE MUTATIONS
   // ════════════════════════════════════════════════════
 
-  function updateItem(type, id, field, value) {
-    const arr = type === 'evo' ? state.evolutions : state.correctifs;
+  function updateItem(type, id, field, value, sectionId) {
+    const arr = getItemsArray(type, sectionId);
     const item = arr.find(x => x.id === id);
     if (item) {
       item[field] = value;
@@ -1262,15 +1753,19 @@
     }
   }
 
-  function deleteItem(type, id) {
+  function deleteItem(type, id, sectionId) {
     if (type === 'evo') state.evolutions = state.evolutions.filter(x => x.id !== id);
-    else state.correctifs = state.correctifs.filter(x => x.id !== id);
+    else if (type === 'fix') state.correctifs = state.correctifs.filter(x => x.id !== id);
+    else {
+      const sec = state.customSections.find(s => s.id === sectionId);
+      if (sec) sec.items = sec.items.filter(x => x.id !== id);
+    }
     renderAll();
     schedulePreview();
   }
 
-  function moveItem(type, id, delta) {
-    const arr = type === 'evo' ? state.evolutions : state.correctifs;
+  function moveItem(type, id, delta, sectionId) {
+    const arr = getItemsArray(type, sectionId);
     const idx = arr.findIndex(x => x.id === id);
     const newIdx = idx + delta;
     if (newIdx < 0 || newIdx >= arr.length) return;
@@ -1279,13 +1774,21 @@
     schedulePreview();
   }
 
-  function addItem(type) {
+  function addItem(type, sectionId) {
     const item = makeItem({});
     if (type === 'evo') state.evolutions.push(item);
-    else state.correctifs.push(item);
+    else if (type === 'fix') state.correctifs.push(item);
+    else {
+      const sec = state.customSections.find(s => s.id === sectionId);
+      if (sec) sec.items.push(item);
+    }
     renderAll();
     setTimeout(() => {
-      const list = document.getElementById(type === 'evo' ? 'evolutions-list' : 'correctifs-list');
+      const list = type === 'evo'
+        ? document.getElementById('evolutions-list')
+        : type === 'fix'
+          ? document.getElementById('correctifs-list')
+          : document.getElementById('custom-sections');
       const cards = list.querySelectorAll('.item-card');
       const last = cards[cards.length - 1];
       if (last) {
@@ -1299,8 +1802,19 @@
   function loadExample() {
     state.produit = 'Mercalys';
     state.version = '8.17.4';
+    state.showIntro = true;
+    state.showClosing = true;
+    state.itemSpacing = 4;
+    state.sectionTitles = {
+      evo: 'Nouvelles fonctionnalités',
+      fix: 'Correctifs et améliorations'
+    };
+    state.sectionColors = { evo: 'rouge', fix: 'or' };
+    state.customSections = [];
     state.evolutions = EXAMPLE_EVOLUTIONS.map(x => makeItem(x));
     state.correctifs = EXAMPLE_CORRECTIFS.map(x => makeItem(x));
+    state.recapBlocks = defaultRecapBlocks(state.evolutions.length, state.correctifs.length);
+    syncRecapColors();
     syncGeneralFields();
     renderAll();
     schedulePreview();
@@ -1316,7 +1830,8 @@
       imageFormat: src.imageFormat || null,
       imageRatio: src.imageRatio || null,
       linkLabel: src.linkLabel || '',
-      linkUrl: src.linkUrl || ''
+      linkUrl: src.linkUrl || '',
+      colorKey: src.colorKey || null
     };
   }
 
@@ -1325,6 +1840,7 @@
     if (x.image) { o.image = x.image; o.imageFormat = x.imageFormat; o.imageRatio = x.imageRatio; }
     if (x.linkLabel) o.linkLabel = x.linkLabel;
     if (x.linkUrl) o.linkUrl = x.linkUrl;
+    if (x.colorKey) o.colorKey = x.colorKey;
     return o;
   }
 
@@ -1337,6 +1853,17 @@
     state.version = '';
     state.showScope = false;
     state.pageBreakBeforeFix = false;
+    state.showIntro = true;
+    state.showClosing = true;
+    state.itemSpacing = 4;
+    state.sectionTitles = {
+      evo: 'Nouvelles fonctionnalités',
+      fix: 'Correctifs et améliorations'
+    };
+    state.sectionColors = { evo: 'rouge', fix: 'or' };
+    state.customSections = [];
+    state.recapBlocks = defaultRecapBlocks(0, 0);
+    syncRecapColors();
     state.evolutions = [];
     state.correctifs = [];
     syncGeneralFields();
@@ -1387,6 +1914,17 @@
       version: state.version,
       showScope: state.showScope,
       pageBreakBeforeFix: state.pageBreakBeforeFix,
+      showIntro: state.showIntro,
+      showClosing: state.showClosing,
+      itemSpacing: state.itemSpacing,
+      sectionTitles: state.sectionTitles,
+      sectionColors: state.sectionColors,
+      customSections: state.customSections.map(s => ({
+        title: s.title,
+        colorKey: s.colorKey,
+        items: (s.items || []).map(serializeItem)
+      })),
+      recapBlocks: state.recapBlocks,
       evolutions: state.evolutions.map(serializeItem),
       correctifs: state.correctifs.map(serializeItem)
     }, null, 2);
@@ -1402,6 +1940,21 @@
     toast('Brouillon exporté');
   }
 
+  function downloadHtmlFile() {
+    const doctype = '<!DOCTYPE html>\n';
+    const htmlSource = doctype + document.documentElement.outerHTML;
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'release-note-generator.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Fichier HTML téléchargé');
+  }
+
   function importDraft(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -1411,12 +1964,42 @@
         state.version = data.version || '';
         state.showScope = !!data.showScope;
         state.pageBreakBeforeFix = !!data.pageBreakBeforeFix;
+        state.showIntro = data.showIntro !== false;
+        state.showClosing = data.showClosing !== false;
+        state.itemSpacing = typeof data.itemSpacing === 'number' ? data.itemSpacing : 4;
+        state.sectionTitles = {
+          evo: data.sectionTitles?.evo || 'Nouvelles fonctionnalités',
+          fix: data.sectionTitles?.fix || 'Correctifs et améliorations'
+        };
+        state.sectionColors = {
+          evo: data.sectionColors?.evo || 'rouge',
+          fix: data.sectionColors?.fix || 'or'
+        };
         state.evolutions = Array.isArray(data.evolutions)
           ? data.evolutions.map(deserializeItem)
           : [];
         state.correctifs = Array.isArray(data.correctifs)
           ? data.correctifs.map(deserializeItem)
           : [];
+        state.customSections = Array.isArray(data.customSections)
+          ? data.customSections.map(s => ({
+              id: uid(),
+              title: s.title || 'Nouvelle section',
+              colorKey: s.colorKey || 'ardoise',
+              items: Array.isArray(s.items) ? s.items.map(deserializeItem) : []
+            }))
+          : [];
+        state.recapBlocks = Array.isArray(data.recapBlocks) && data.recapBlocks.length > 0
+          ? data.recapBlocks.map((x, idx) => ({
+              id: x.id || uid(),
+              label: x.label || `Bloc ${idx + 1}`,
+              value: x.value || '',
+              color: x.color || '#82072A',
+              colorKey: x.colorKey || null,
+              visible: x.visible !== false
+            }))
+          : defaultRecapBlocks(state.evolutions.length, state.correctifs.length);
+        syncRecapColors();
         syncGeneralFields();
         renderAll();
         schedulePreview();
@@ -1459,9 +2042,48 @@
     schedulePreview();
   });
 
+  document.getElementById('toggle-intro').addEventListener('change', e => {
+    state.showIntro = e.target.checked;
+    schedulePreview();
+  });
+
+  document.getElementById('toggle-closing').addEventListener('change', e => {
+    state.showClosing = e.target.checked;
+    schedulePreview();
+  });
+
+  document.getElementById('slider-spacing').addEventListener('input', e => {
+    state.itemSpacing = Number(e.target.value) || 0;
+    document.getElementById('spacing-value').textContent = `${state.itemSpacing} mm`;
+    schedulePreview();
+  });
+
+  document.getElementById('field-title-evo').addEventListener('input', e => {
+    state.sectionTitles.evo = e.target.value || 'Nouvelles fonctionnalités';
+    document.getElementById('title-evo-display').textContent = state.sectionTitles.evo;
+    schedulePreview();
+  });
+
+  document.getElementById('field-title-fix').addEventListener('input', e => {
+    state.sectionTitles.fix = e.target.value || 'Correctifs et améliorations';
+    document.getElementById('title-fix-display').textContent = state.sectionTitles.fix;
+    schedulePreview();
+  });
+
   document.getElementById('add-evo-btn').addEventListener('click', () => addItem('evo'));
   document.getElementById('add-fix-btn').addEventListener('click', () => addItem('fix'));
+  document.getElementById('add-custom-section-btn').addEventListener('click', () => {
+    state.customSections.push({
+      id: uid(),
+      title: 'Nouvelle section',
+      colorKey: 'ardoise',
+      items: []
+    });
+    renderAll();
+    schedulePreview();
+  });
   document.getElementById('download-btn').addEventListener('click', downloadPdf);
+  document.getElementById('download-html-btn').addEventListener('click', downloadHtmlFile);
   document.getElementById('export-btn').addEventListener('click', exportDraft);
   document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
   document.getElementById('import-file').addEventListener('change', e => {
@@ -1520,10 +2142,30 @@
     const version = data.version || '';
     const nEvo = data.evolutions.length;
     const nFix = data.correctifs.length;
+    const sectionEvoTitle = data.sectionTitles?.evo || 'Nouvelles fonctionnalités';
+    const sectionFixTitle = data.sectionTitles?.fix || 'Correctifs et améliorations';
+    const itemSpacing = Math.max(0, Number(data.itemSpacing) || 0);
+    const sectionColors = data.sectionColors || { evo: 'rouge', fix: 'or' };
 
     function setFill(c) { doc.setFillColor(c[0], c[1], c[2]); }
     function setDraw(c) { doc.setDrawColor(c[0], c[1], c[2]); }
     function setText(c) { doc.setTextColor(c[0], c[1], c[2]); }
+    function hexToRgb(hex) {
+      if (!hex || typeof hex !== 'string') return null;
+      const cleaned = hex.replace('#', '').trim();
+      if (!/^[0-9a-fA-F]{6}$/.test(cleaned)) return null;
+      return [
+        parseInt(cleaned.slice(0, 2), 16),
+        parseInt(cleaned.slice(2, 4), 16),
+        parseInt(cleaned.slice(4, 6), 16)
+      ];
+    }
+    function tint(rgb, ratio) {
+      return rgb.map(v => Math.round(v + (255 - v) * ratio));
+    }
+    function paletteFromKey(key, fallback) {
+      return COLOR_PALETTE[key] || COLOR_PALETTE[fallback || 'rouge'];
+    }
 
     function drawHeader(isCover) {
       setFill(BORDEAUX_DEEP);
@@ -1626,12 +2268,14 @@
       return { h, titleLines, bodyLines, imgH };
     }
 
-    function drawCard(x, y, w, item, type) {
+    function drawCard(x, y, w, item, sectionColorKey) {
       const title = item.title;
       const body = item.description;
       const scope = item.scope;
-      const accentColor = type === 'evo' ? ROUGE_VIF : GOLD;
-      const bgColor = type === 'evo' ? ROUGE_LIGHT : GOLD_LIGHT;
+      const resolvedKey = item.colorKey || sectionColorKey;
+      const palette = paletteFromKey(resolvedKey, 'rouge');
+      const accentColor = palette.dark;
+      const bgColor = palette.light;
 
       const { h, titleLines, bodyLines, imgH } = measureCardHeight(title, body, scope, w, item);
 
@@ -1716,6 +2360,28 @@
       return currentY;
     }
 
+    function renderSectionMasonry(items, sectionColorKey, startY) {
+      let colY = [startY, startY];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const h = measureCardHeight(item.title, item.description, item.scope, COL_W, item).h;
+        let col = colY[0] <= colY[1] ? 0 : 1;
+        const other = col === 0 ? 1 : 0;
+        if (colY[col] + h > PH - MB && colY[other] + h <= PH - MB) col = other;
+        if (colY[col] + h > PH - MB) {
+          drawFooter(pageNum);
+          doc.addPage();
+          pageNum++;
+          drawHeader(false);
+          colY = [MT + 2, MT + 2];
+        }
+        const x = col === 0 ? ML : ML + COL_W + COL_GAP;
+        drawCard(x, colY[col], COL_W, item, sectionColorKey);
+        colY[col] += h + itemSpacing;
+      }
+      return Math.max(colY[0], colY[1]);
+    }
+
     // ═════ PAGE 1 — COVER ═════
     drawHeader(true);
     let y = MT + 3;
@@ -1723,26 +2389,32 @@
     setText(DARK);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
-    const intro = `La version ${version || '—'} de ${produit} est déployée par vagues sur l'ensemble des points de vente. ` +
-                  `Elle apporte ${nEvo} nouvelle${nEvo > 1 ? 's' : ''} fonctionnalité${nEvo > 1 ? 's' : ''} ainsi que ` +
-                  `${nFix} correctif${nFix > 1 ? 's' : ''} pour votre outil de gestion commerciale.`;
-    const introLines = doc.splitTextToSize(intro, PW - ML - MR);
-    introLines.forEach(l => { doc.text(l, ML, y); y += 4.5; });
-    y += 4;
+    if (data.showIntro !== false) {
+      const intro = `La version ${version || '—'} de ${produit} est déployée par vagues sur l'ensemble des points de vente. ` +
+                    `Elle apporte ${nEvo} nouvelle${nEvo > 1 ? 's' : ''} fonctionnalité${nEvo > 1 ? 's' : ''} ainsi que ` +
+                    `${nFix} correctif${nFix > 1 ? 's' : ''} pour votre outil de gestion commerciale.`;
+      const introLines = doc.splitTextToSize(intro, PW - ML - MR);
+      introLines.forEach(l => { doc.text(l, ML, y); y += 4.5; });
+      y += 4;
+    }
 
-    // Stats row — 2 or 3 boxes depending on showScope
-    const statBoxes = [
-      { num: nEvo, label: 'NOUVELLES FONCTIONNALITES', bg: ROUGE_LIGHT, color: ROUGE_VIF },
-      { num: nFix, label: 'CORRECTIFS APPLIQUES',      bg: GOLD_LIGHT,  color: GOLD }
-    ];
-
-    if (data.showScope) {
-      const allScopes = new Set();
-      [...data.evolutions, ...data.correctifs].forEach(x => {
-        const parts = (x.scope || '').split(/[&,]/).map(s => s.trim()).filter(Boolean);
-        parts.forEach(p => allScopes.add(p));
+    const statBoxes = (data.recapBlocks || [])
+      .filter(x => x && x.visible !== false)
+      .map(x => {
+        const color = x.colorKey ? (paletteFromKey(x.colorKey, 'bordeaux').dark) : (hexToRgb(x.color) || BORDEAUX);
+        return {
+          num: String(x.value || '—'),
+          label: (x.label || 'Bloc').toUpperCase(),
+          bg: tint(color, 0.86),
+          color
+        };
       });
-      statBoxes.push({ num: allScopes.size, label: 'PERIMETRES CONCERNES', bg: BEIGE, color: BORDEAUX });
+
+    if (statBoxes.length === 0) {
+      statBoxes.push(
+        { num: String(nEvo), label: 'NOUVELLES FONCTIONNALITES', bg: ROUGE_LIGHT, color: paletteFromKey(sectionColors.evo, 'rouge').dark },
+        { num: String(nFix), label: 'CORRECTIFS APPLIQUES', bg: GOLD_LIGHT, color: paletteFromKey(sectionColors.fix, 'or').dark }
+      );
     }
 
     const nBoxes = statBoxes.length;
@@ -1777,23 +2449,9 @@
     // ═════ EVOLUTIONS ═════
     if (data.evolutions.length > 0) {
       y = ensureSpace(y, 20);
-      drawSectionHeader(y, 'Nouvelles fonctionnalités', ROUGE_VIF);
+      drawSectionHeader(y, sectionEvoTitle, paletteFromKey(sectionColors.evo, 'rouge').dark);
       y += 7;
-
-      for (let i = 0; i < data.evolutions.length; i += 2) {
-        const left = data.evolutions[i];
-        const right = data.evolutions[i + 1];
-
-        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W, left).h;
-        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W, right).h : 0;
-        const rowH = Math.max(lh, rh);
-
-        y = ensureSpace(y, rowH);
-
-        drawCard(ML, y, COL_W, left, 'evo');
-        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right, 'evo');
-        y += rowH + 4;
-      }
+      y = renderSectionMasonry(data.evolutions, sectionColors.evo, y);
     }
 
     // ═════ SECTION BREAK BETWEEN EVOLUTIONS AND CORRECTIFS ═════
@@ -1817,27 +2475,28 @@
     // ═════ CORRECTIFS ═════
     if (data.correctifs.length > 0) {
       y = ensureSpace(y, 20);
-      drawSectionHeader(y, 'Correctifs et améliorations', GOLD);
+      drawSectionHeader(y, sectionFixTitle, paletteFromKey(sectionColors.fix, 'or').dark);
       y += 7;
+      y = renderSectionMasonry(data.correctifs, sectionColors.fix, y);
+    }
 
-      for (let i = 0; i < data.correctifs.length; i += 2) {
-        const left = data.correctifs[i];
-        const right = data.correctifs[i + 1];
-
-        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W, left).h;
-        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W, right).h : 0;
-        const rowH = Math.max(lh, rh);
-
-        y = ensureSpace(y, rowH);
-
-        drawCard(ML, y, COL_W, left, 'fix');
-        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right, 'fix');
-        y += rowH + 4;
-      }
+    if (Array.isArray(data.customSections)) {
+      data.customSections.forEach(section => {
+        if (!section.items || section.items.length === 0) return;
+        y = ensureSpace(y, 20);
+        const sectionPalette = paletteFromKey(section.colorKey || 'ardoise', 'ardoise');
+        drawSectionHeader(y, section.title || 'Nouvelle section', sectionPalette.dark);
+        y += 7;
+        y = renderSectionMasonry(section.items, section.colorKey || 'ardoise', y);
+        y += 3;
+        y = ensureSpace(y, 12);
+      });
     }
 
     // Empty state
-    if (data.evolutions.length === 0 && data.correctifs.length === 0) {
+    const hasCustomContent = Array.isArray(data.customSections)
+      && data.customSections.some(s => Array.isArray(s.items) && s.items.length > 0);
+    if (data.evolutions.length === 0 && data.correctifs.length === 0 && !hasCustomContent) {
       setText(TAUPE);
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(11);
@@ -1845,68 +2504,61 @@
     }
 
     // ═════ CLOSING — "À propos" info + courtesy ═════
-    y += 4;
+    y += itemSpacing;
 
-    // Pre-measure description so we size the box correctly
-    const descText = "Retrouvez l'ensemble des notes de version précédentes directement dans Mercalys, via le menu « À propos ».";
-    const iconColW = 10;  // space reserved for the left icon
-    const boxPadding = 5;
-    const innerTextW = (PW - ML - MR) - iconColW - 2 * boxPadding;
+    if (data.showClosing !== false) {
+      // Pre-measure description so we size the box correctly
+      const descText = "Retrouvez l'ensemble des notes de version précédentes directement dans Mercalys, via le menu « À propos ».";
+      const iconColW = 10;
+      const boxPadding = 5;
+      const innerTextW = (PW - ML - MR) - iconColW - 2 * boxPadding;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    const descLines = doc.splitTextToSize(descText, innerTextW);
-    const descBlockH = descLines.length * 3.5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      const descLines = doc.splitTextToSize(descText, innerTextW);
+      const descBlockH = descLines.length * 3.5;
+      const boxH = 4 + 4 + 2 + descBlockH + 4;
+      y = ensureSpace(y, 7 + boxH + 7);
 
-    // Box height: top pad + title(4.5) + gap(2) + desc + bottom pad
-    const boxH = 4 + 4 + 2 + descBlockH + 4;
+      drawGoldRule(y, 0.5);
+      y += 6;
 
-    // Reserve space: gold rule (~7) + box + gap + courtesy line (~4)
-    y = ensureSpace(y, 7 + boxH + 7);
+      const boxW = PW - ML - MR;
+      setFill(BEIGE);
+      setDraw(TAUPE_LIGHT);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(ML, y, boxW, boxH, 2.5, 2.5, 'FD');
 
-    drawGoldRule(y, 0.5);
-    y += 6;
+      const iconCx = ML + 6.5;
+      const iconCy = y + boxH / 2;
+      setFill(BORDEAUX);
+      doc.circle(iconCx, iconCy, 3, 'F');
+      setText(WHITE);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('i', iconCx, iconCy + 1.2, { align: 'center' });
 
-    // Box background
-    const boxW = PW - ML - MR;
-    setFill(BEIGE);
-    setDraw(TAUPE_LIGHT);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, boxW, boxH, 2.5, 2.5, 'FD');
+      const textX = ML + iconColW + 2;
+      setText(BORDEAUX);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.text('Historique complet des versions', textX, y + 6);
 
-    // Info icon — manually drawn bordeaux circle with "i"
-    const iconCx = ML + 6.5;
-    const iconCy = y + boxH / 2;
-    setFill(BORDEAUX);
-    doc.circle(iconCx, iconCy, 3, 'F');
-    setText(WHITE);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('i', iconCx, iconCy + 1.2, { align: 'center' });
+      setText(DARK);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      let descY = y + 11;
+      descLines.forEach(line => {
+        doc.text(line, textX, descY);
+        descY += 3.5;
+      });
 
-    // Title and description
-    const textX = ML + iconColW + 2;
-    setText(BORDEAUX);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.text('Historique complet des versions', textX, y + 6);
-
-    setText(DARK);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    let descY = y + 11;
-    descLines.forEach(line => {
-      doc.text(line, textX, descY);
-      descY += 3.5;
-    });
-
-    y += boxH + 5;
-
-    // Courtesy note
-    setText(TAUPE);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7.5);
-    doc.text("Pour toute question, contactez votre référent GESCOM PDV. Bonne utilisation !", ML, y);
+      y += boxH + 5;
+      setText(TAUPE);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7.5);
+      doc.text("Pour toute question, contactez votre référent GESCOM PDV. Bonne utilisation !", ML, y);
+    }
 
     drawFooter(pageNum);
 
