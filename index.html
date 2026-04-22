@@ -494,6 +494,109 @@
   .item-controls {
     display: flex;
     gap: 4px;
+    align-items: center;
+  }
+
+  .color-chip-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--border-soft);
+    background: white;
+    cursor: pointer;
+    display: inline-grid;
+    place-items: center;
+    font-size: 12px;
+    color: var(--taupe);
+    position: relative;
+  }
+
+  .color-chip-btn .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.12);
+  }
+
+  .color-chip-btn.inherit .dot {
+    background: repeating-linear-gradient(
+      45deg,
+      #ffffff,
+      #ffffff 3px,
+      #ece6dd 3px,
+      #ece6dd 6px
+    );
+  }
+
+  .section-color-trigger {
+    margin-left: auto;
+  }
+
+  .color-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    width: 220px;
+    background: white;
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(45, 16, 24, 0.18);
+    padding: 10px;
+    display: none;
+  }
+
+  .color-popover.open { display: block; }
+
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .color-opt {
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    height: 34px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .color-opt.active::after {
+    content: '✓';
+    position: absolute;
+    right: 5px;
+    top: 2px;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  }
+
+  .color-reset {
+    margin-top: 8px;
+    width: 100%;
+    border: 1px solid var(--border-soft);
+    background: var(--beige-light);
+    color: var(--bordeaux);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .custom-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .custom-section-card {
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 12px;
+    background: var(--beige-light);
   }
 
   .icon-btn {
@@ -838,6 +941,9 @@
       <button class="secondary-btn" id="import-btn" title="Importer un brouillon JSON">
         📂 Importer
       </button>
+      <button class="secondary-btn" id="download-html-btn" title="Télécharger ce générateur en fichier HTML">
+        🌐 Télécharger HTML
+      </button>
       <button class="secondary-btn" id="example-btn" title="Charger l'exemple Mercalys 8.17.4">
         ✨ Exemple
       </button>
@@ -953,6 +1059,16 @@
       </button>
     </section>
 
+    <section class="section">
+      <div class="section-head">
+        <h2><span class="section-accent"></span>Sections supplémentaires</h2>
+      </div>
+      <div class="custom-sections" id="custom-sections"></div>
+      <button class="add-btn" id="add-custom-section-btn">
+        <span class="add-btn-plus">+</span> Ajouter une section
+      </button>
+    </section>
+
   </div>
 
   <!-- ═════ COLONNE APERÇU ═════ -->
@@ -1040,6 +1156,17 @@
   // STATE
   // ════════════════════════════════════════════════════
 
+  const COLOR_PALETTE = {
+    rouge: { name: 'Rouge', dark: [255, 40, 34], light: [252, 234, 233] },
+    bordeaux: { name: 'Bordeaux', dark: [130, 7, 42], light: [248, 232, 236] },
+    or: { name: 'Or', dark: [212, 168, 83], light: [245, 237, 216] },
+    taupe: { name: 'Taupe', dark: [160, 134, 112], light: [242, 236, 229] },
+    sauge: { name: 'Sauge', dark: [114, 140, 120], light: [233, 241, 236] },
+    ardoise: { name: 'Ardoise', dark: [93, 109, 130], light: [232, 237, 245] },
+    terracotta: { name: 'Terracotta', dark: [196, 101, 74], light: [250, 232, 226] },
+    prune: { name: 'Prune', dark: [108, 62, 102], light: [241, 232, 242] }
+  };
+
   const state = {
     produit: 'Mercalys',
     version: '8.17.4',
@@ -1077,6 +1204,7 @@
     renderRecapEditor();
     renderItems('evo');
     renderItems('fix');
+    renderCustomSections();
     updateCounts();
   }
 
@@ -1150,11 +1278,11 @@
     }
 
     items.forEach((item, idx) => {
-      container.appendChild(createItemCard(item, type, idx, items.length));
+      container.appendChild(createItemCard(item, type, idx, items.length, null));
     });
   }
 
-  function createItemCard(item, type, idx, total) {
+  function createItemCard(item, type, idx, total, sectionId) {
     const card = document.createElement('div');
     card.className = `item-card ${type}`;
     card.dataset.id = item.id;
@@ -1176,7 +1304,7 @@
     upBtn.textContent = '↑';
     upBtn.disabled = idx === 0;
     if (idx === 0) upBtn.style.opacity = '0.3';
-    upBtn.addEventListener('click', () => moveItem(type, item.id, -1));
+    upBtn.addEventListener('click', () => moveItem(type, item.id, -1, sectionId));
 
     const downBtn = document.createElement('button');
     downBtn.className = 'icon-btn';
@@ -1184,14 +1312,22 @@
     downBtn.textContent = '↓';
     downBtn.disabled = idx === total - 1;
     if (idx === total - 1) downBtn.style.opacity = '0.3';
-    downBtn.addEventListener('click', () => moveItem(type, item.id, 1));
+    downBtn.addEventListener('click', () => moveItem(type, item.id, 1, sectionId));
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'icon-btn danger';
     deleteBtn.title = 'Supprimer';
     deleteBtn.textContent = '×';
-    deleteBtn.addEventListener('click', () => deleteItem(type, item.id));
+    deleteBtn.addEventListener('click', () => deleteItem(type, item.id, sectionId));
 
+    const colorBtn = buildColorPicker({
+      value: item.colorKey || null,
+      onSelect: (k) => updateItem(type, item.id, 'colorKey', k, sectionId),
+      allowReset: true,
+      onReset: () => updateItem(type, item.id, 'colorKey', null, sectionId)
+    });
+
+    controls.appendChild(colorBtn);
     controls.appendChild(upBtn);
     controls.appendChild(downBtn);
     controls.appendChild(deleteBtn);
@@ -1204,7 +1340,7 @@
     titleInput.className = 'item-title';
     titleInput.placeholder = 'Titre (max ~55 caractères)';
     titleInput.value = item.title || '';
-    titleInput.addEventListener('input', e => updateItem(type, item.id, 'title', e.target.value));
+    titleInput.addEventListener('input', e => updateItem(type, item.id, 'title', e.target.value, sectionId));
 
     // Description
     const descInput = document.createElement('textarea');
@@ -1212,20 +1348,20 @@
     descInput.placeholder = 'Description orientée point de vente (1 à 3 phrases)';
     descInput.rows = 3;
     descInput.value = item.description || '';
-    descInput.addEventListener('input', e => updateItem(type, item.id, 'description', e.target.value));
+    descInput.addEventListener('input', e => updateItem(type, item.id, 'description', e.target.value, sectionId));
 
     // Image preview (if present)
     const imageContainer = document.createElement('div');
     imageContainer.className = 'image-container';
     if (item.image) {
-      imageContainer.appendChild(buildImagePreview(type, item));
+      imageContainer.appendChild(buildImagePreview(type, item, sectionId));
     }
 
     // Link row (shown if linkUrl or linkLabel filled, or image present so user sees structure)
     const linkContainer = document.createElement('div');
     linkContainer.className = 'link-container';
     if (item.linkLabel || item.linkUrl) {
-      linkContainer.appendChild(buildLinkRow(type, item));
+      linkContainer.appendChild(buildLinkRow(type, item, sectionId));
     }
 
     // Scope row
@@ -1238,7 +1374,7 @@
     scopeInput.className = 'item-scope';
     scopeInput.placeholder = 'ex : France, Belgique, Tous pays…';
     scopeInput.value = item.scope || '';
-    scopeInput.addEventListener('input', e => updateItem(type, item.id, 'scope', e.target.value));
+    scopeInput.addEventListener('input', e => updateItem(type, item.id, 'scope', e.target.value, sectionId));
     scopeRow.appendChild(scopeLabel);
     scopeRow.appendChild(scopeInput);
 
@@ -1257,7 +1393,7 @@
     imgInput.style.display = 'none';
     imgInput.addEventListener('change', e => {
       const f = e.target.files[0];
-      if (f) handleImageUpload(type, item.id, f);
+      if (f) handleImageUpload(type, item.id, f, sectionId);
       e.target.value = '';
     });
     imgLabel.appendChild(imgInput);
@@ -1275,7 +1411,7 @@
           row.querySelector('input').focus();
         }
       } else {
-        updateItem(type, item.id, 'linkLabel', 'Contacter le SAV');
+        updateItem(type, item.id, 'linkLabel', 'Contacter le SAV', sectionId);
         // re-render to show the row
       }
     });
@@ -1296,7 +1432,7 @@
     return card;
   }
 
-  function buildImagePreview(type, item) {
+  function buildImagePreview(type, item, sectionId) {
     const wrap = document.createElement('div');
     wrap.className = 'image-preview';
     const img = document.createElement('img');
@@ -1307,7 +1443,7 @@
     rm.title = 'Retirer l\'image';
     rm.textContent = '×';
     rm.addEventListener('click', () => {
-      const arr = type === 'evo' ? state.evolutions : state.correctifs;
+      const arr = getItemsArray(type, sectionId);
       const it = arr.find(x => x.id === item.id);
       if (it) {
         it.image = null;
@@ -1322,7 +1458,7 @@
     return wrap;
   }
 
-  function buildLinkRow(type, item) {
+  function buildLinkRow(type, item, sectionId) {
     const row = document.createElement('div');
     row.className = 'link-row';
 
@@ -1330,20 +1466,20 @@
     labelInput.type = 'text';
     labelInput.placeholder = 'Libellé (ex : Contacter le SAV)';
     labelInput.value = item.linkLabel || '';
-    labelInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkLabel', e.target.value));
+    labelInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkLabel', e.target.value, sectionId));
 
     const urlInput = document.createElement('input');
     urlInput.type = 'url';
     urlInput.placeholder = 'https://…';
     urlInput.value = item.linkUrl || '';
-    urlInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkUrl', e.target.value));
+    urlInput.addEventListener('input', e => updateItemSilent(type, item.id, 'linkUrl', e.target.value, sectionId));
 
     const rm = document.createElement('button');
     rm.type = 'button';
     rm.title = 'Supprimer le lien';
     rm.textContent = '×';
     rm.addEventListener('click', () => {
-      const arr = type === 'evo' ? state.evolutions : state.correctifs;
+      const arr = getItemsArray(type, sectionId);
       const it = arr.find(x => x.id === item.id);
       if (it) {
         it.linkLabel = '';
@@ -1360,8 +1496,8 @@
   }
 
   // Silent update — does not re-render editor, only preview
-  function updateItemSilent(type, id, field, value) {
-    const arr = type === 'evo' ? state.evolutions : state.correctifs;
+  function updateItemSilent(type, id, field, value, sectionId) {
+    const arr = getItemsArray(type, sectionId);
     const item = arr.find(x => x.id === id);
     if (item) {
       item[field] = value;
@@ -1369,7 +1505,7 @@
     }
   }
 
-  function handleImageUpload(type, id, file) {
+  function handleImageUpload(type, id, file, sectionId) {
     if (!file.type.startsWith('image/')) {
       toast('Le fichier doit être une image', true);
       return;
@@ -1384,7 +1520,7 @@
       // Load to get dimensions
       const img = new Image();
       img.onload = () => {
-        const arr = type === 'evo' ? state.evolutions : state.correctifs;
+        const arr = getItemsArray(type, sectionId);
         const item = arr.find(x => x.id === id);
         if (item) {
           item.image = dataUrl;
@@ -1406,6 +1542,12 @@
   function updateCounts() {
     document.getElementById('count-evo').textContent = state.evolutions.length;
     document.getElementById('count-fix').textContent = state.correctifs.length;
+  }
+
+  function syncRecapColors() {
+    if (!state.recapBlocks[0]) return;
+    if (state.recapBlocks[0]) state.recapBlocks[0].colorKey = state.sectionColors.evo;
+    if (state.recapBlocks[1]) state.recapBlocks[1].colorKey = state.sectionColors.fix;
   }
 
   function syncGeneralFields() {
@@ -1432,8 +1574,8 @@
   // STATE MUTATIONS
   // ════════════════════════════════════════════════════
 
-  function updateItem(type, id, field, value) {
-    const arr = type === 'evo' ? state.evolutions : state.correctifs;
+  function updateItem(type, id, field, value, sectionId) {
+    const arr = getItemsArray(type, sectionId);
     const item = arr.find(x => x.id === id);
     if (item) {
       item[field] = value;
@@ -1445,15 +1587,19 @@
     }
   }
 
-  function deleteItem(type, id) {
+  function deleteItem(type, id, sectionId) {
     if (type === 'evo') state.evolutions = state.evolutions.filter(x => x.id !== id);
-    else state.correctifs = state.correctifs.filter(x => x.id !== id);
+    else if (type === 'fix') state.correctifs = state.correctifs.filter(x => x.id !== id);
+    else {
+      const sec = state.customSections.find(s => s.id === sectionId);
+      if (sec) sec.items = sec.items.filter(x => x.id !== id);
+    }
     renderAll();
     schedulePreview();
   }
 
-  function moveItem(type, id, delta) {
-    const arr = type === 'evo' ? state.evolutions : state.correctifs;
+  function moveItem(type, id, delta, sectionId) {
+    const arr = getItemsArray(type, sectionId);
     const idx = arr.findIndex(x => x.id === id);
     const newIdx = idx + delta;
     if (newIdx < 0 || newIdx >= arr.length) return;
@@ -1462,13 +1608,21 @@
     schedulePreview();
   }
 
-  function addItem(type) {
+  function addItem(type, sectionId) {
     const item = makeItem({});
     if (type === 'evo') state.evolutions.push(item);
-    else state.correctifs.push(item);
+    else if (type === 'fix') state.correctifs.push(item);
+    else {
+      const sec = state.customSections.find(s => s.id === sectionId);
+      if (sec) sec.items.push(item);
+    }
     renderAll();
     setTimeout(() => {
-      const list = document.getElementById(type === 'evo' ? 'evolutions-list' : 'correctifs-list');
+      const list = type === 'evo'
+        ? document.getElementById('evolutions-list')
+        : type === 'fix'
+          ? document.getElementById('correctifs-list')
+          : document.getElementById('custom-sections');
       const cards = list.querySelectorAll('.item-card');
       const last = cards[cards.length - 1];
       if (last) {
@@ -1507,7 +1661,8 @@
       imageFormat: src.imageFormat || null,
       imageRatio: src.imageRatio || null,
       linkLabel: src.linkLabel || '',
-      linkUrl: src.linkUrl || ''
+      linkUrl: src.linkUrl || '',
+      colorKey: src.colorKey || null
     };
   }
 
@@ -1516,6 +1671,7 @@
     if (x.image) { o.image = x.image; o.imageFormat = x.imageFormat; o.imageRatio = x.imageRatio; }
     if (x.linkLabel) o.linkLabel = x.linkLabel;
     if (x.linkUrl) o.linkUrl = x.linkUrl;
+    if (x.colorKey) o.colorKey = x.colorKey;
     return o;
   }
 
@@ -1604,6 +1760,21 @@
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast('Brouillon exporté');
+  }
+
+  function downloadHtmlFile() {
+    const doctype = '<!DOCTYPE html>\n';
+    const htmlSource = doctype + document.documentElement.outerHTML;
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'release-note-generator.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Fichier HTML téléchargé');
   }
 
   function importDraft(file) {
@@ -1709,7 +1880,18 @@
 
   document.getElementById('add-evo-btn').addEventListener('click', () => addItem('evo'));
   document.getElementById('add-fix-btn').addEventListener('click', () => addItem('fix'));
+  document.getElementById('add-custom-section-btn').addEventListener('click', () => {
+    state.customSections.push({
+      id: uid(),
+      title: 'Nouvelle section',
+      colorKey: 'ardoise',
+      items: []
+    });
+    renderAll();
+    schedulePreview();
+  });
   document.getElementById('download-btn').addEventListener('click', downloadPdf);
+  document.getElementById('download-html-btn').addEventListener('click', downloadHtmlFile);
   document.getElementById('export-btn').addEventListener('click', exportDraft);
   document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
   document.getElementById('import-file').addEventListener('change', e => {
@@ -1890,12 +2072,14 @@
       return { h, titleLines, bodyLines, imgH };
     }
 
-    function drawCard(x, y, w, item, type) {
+    function drawCard(x, y, w, item, sectionColorKey) {
       const title = item.title;
       const body = item.description;
       const scope = item.scope;
-      const accentColor = type === 'evo' ? ROUGE_VIF : GOLD;
-      const bgColor = type === 'evo' ? ROUGE_LIGHT : GOLD_LIGHT;
+      const resolvedKey = item.colorKey || sectionColorKey;
+      const palette = paletteFromKey(resolvedKey, 'rouge');
+      const accentColor = palette.dark;
+      const bgColor = palette.light;
 
       const { h, titleLines, bodyLines, imgH } = measureCardHeight(title, body, scope, w, item);
 
@@ -1978,6 +2162,28 @@
         return MT + 2;
       }
       return currentY;
+    }
+
+    function renderSectionMasonry(items, sectionColorKey, startY) {
+      let colY = [startY, startY];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const h = measureCardHeight(item.title, item.description, item.scope, COL_W, item).h;
+        let col = colY[0] <= colY[1] ? 0 : 1;
+        const other = col === 0 ? 1 : 0;
+        if (colY[col] + h > PH - MB && colY[other] + h <= PH - MB) col = other;
+        if (colY[col] + h > PH - MB) {
+          drawFooter(pageNum);
+          doc.addPage();
+          pageNum++;
+          drawHeader(false);
+          colY = [MT + 2, MT + 2];
+        }
+        const x = col === 0 ? ML : ML + COL_W + COL_GAP;
+        drawCard(x, colY[col], COL_W, item, sectionColorKey);
+        colY[col] += h + itemSpacing;
+      }
+      return Math.max(colY[0], colY[1]);
     }
 
     // ═════ PAGE 1 — COVER ═════
@@ -2089,6 +2295,8 @@
       y = ensureSpace(y, 20);
       drawSectionHeader(y, sectionFixTitle, GOLD);
       y += 7;
+      y = renderSectionMasonry(data.correctifs, sectionColors.fix, y);
+    }
 
       for (let i = 0; i < data.correctifs.length; i += 2) {
         const left = data.correctifs[i];
@@ -2107,7 +2315,9 @@
     }
 
     // Empty state
-    if (data.evolutions.length === 0 && data.correctifs.length === 0) {
+    const hasCustomContent = Array.isArray(data.customSections)
+      && data.customSections.some(s => Array.isArray(s.items) && s.items.length > 0);
+    if (data.evolutions.length === 0 && data.correctifs.length === 0 && !hasCustomContent) {
       setText(TAUPE);
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(11);
