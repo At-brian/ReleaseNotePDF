@@ -1031,7 +1031,6 @@
     <section class="section">
       <div class="section-head">
         <h2><span class="section-accent rouge"></span><span id="title-evo-display">Nouvelles fonctionnalités</span></h2>
-        <div class="section-color-trigger" id="section-color-trigger-evo"></div>
         <span class="count-pill" id="count-evo">0</span>
       </div>
       <div class="field">
@@ -1048,7 +1047,6 @@
     <section class="section">
       <div class="section-head">
         <h2><span class="section-accent"></span><span id="title-fix-display">Correctifs et améliorations</span></h2>
-        <div class="section-color-trigger" id="section-color-trigger-fix"></div>
         <span class="count-pill" id="count-fix">0</span>
       </div>
       <div class="field">
@@ -1181,11 +1179,6 @@
       evo: 'Nouvelles fonctionnalités',
       fix: 'Correctifs et améliorations'
     },
-    sectionColors: {
-      evo: 'rouge',
-      fix: 'or'
-    },
-    customSections: [],
     recapBlocks: [],
     evolutions: [],
     correctifs: []
@@ -1195,14 +1188,10 @@
   let currentPdfUrl = null;
 
   function uid() { return 'id_' + Math.random().toString(36).slice(2, 10); }
-  function rgbToCss(rgb) { return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`; }
-  function getPalette(key, fallback) {
-    return COLOR_PALETTE[key] || COLOR_PALETTE[fallback || 'rouge'];
-  }
   function defaultRecapBlocks(evoCount, fixCount) {
     return [
-      { id: uid(), label: 'Nouvelles fonctionnalités', value: String(evoCount || 0), colorKey: 'rouge', visible: true },
-      { id: uid(), label: 'Correctifs appliqués', value: String(fixCount || 0), colorKey: 'or', visible: true },
+      { id: uid(), label: 'Nouvelles fonctionnalités', value: String(evoCount || 0), color: '#FF2822', visible: true },
+      { id: uid(), label: 'Correctifs appliqués', value: String(fixCount || 0), color: '#D4A853', visible: true },
       { id: uid(), label: 'Périmètres concernés', value: '', color: '#511227', visible: false }
     ];
   }
@@ -1213,7 +1202,6 @@
 
   function renderAll() {
     renderRecapEditor();
-    renderSectionColorTriggers();
     renderItems('evo');
     renderItems('fix');
     renderCustomSections();
@@ -1257,12 +1245,10 @@
 
       const colorInput = document.createElement('input');
       colorInput.type = 'color';
-      const palette = block.colorKey ? getPalette(block.colorKey, 'bordeaux') : null;
-      colorInput.value = palette ? rgbToHex(palette.dark) : (block.color || '#82072A');
+      colorInput.value = block.color || '#82072A';
       colorInput.title = 'Couleur du bloc';
       colorInput.addEventListener('input', e => {
         block.color = e.target.value;
-        block.colorKey = null;
         schedulePreview();
       });
 
@@ -1272,158 +1258,6 @@
       row.appendChild(colorInput);
       list.appendChild(row);
     });
-  }
-
-  function renderSectionColorTriggers() {
-    [['evo', 'section-color-trigger-evo'], ['fix', 'section-color-trigger-fix']].forEach(([key, id]) => {
-      const host = document.getElementById(id);
-      if (!host) return;
-      host.innerHTML = '';
-      host.appendChild(buildColorPicker({
-        value: state.sectionColors[key],
-        onSelect: (colorKey) => {
-          state.sectionColors[key] = colorKey;
-          syncRecapColors();
-          renderAll();
-          schedulePreview();
-        },
-        allowReset: false
-      }));
-    });
-  }
-
-  function renderCustomSections() {
-    const host = document.getElementById('custom-sections');
-    if (!host) return;
-    host.innerHTML = '';
-    state.customSections.forEach((section, idx) => {
-      const card = document.createElement('div');
-      card.className = 'custom-section-card';
-
-      const top = document.createElement('div');
-      top.className = 'item-header';
-      const title = document.createElement('input');
-      title.className = 'inline-input';
-      title.value = section.title || '';
-      title.placeholder = 'Titre de section';
-      title.addEventListener('input', e => {
-        section.title = e.target.value;
-        schedulePreview();
-      });
-      const controls = document.createElement('div');
-      controls.className = 'item-controls';
-      controls.appendChild(buildColorPicker({
-        value: section.colorKey || 'ardoise',
-        onSelect: (k) => { section.colorKey = k; schedulePreview(); },
-        allowReset: false
-      }));
-      const del = document.createElement('button');
-      del.className = 'icon-btn danger';
-      del.textContent = '×';
-      del.title = 'Supprimer la section';
-      del.addEventListener('click', () => {
-        state.customSections.splice(idx, 1);
-        renderAll();
-        schedulePreview();
-      });
-      controls.appendChild(del);
-      top.appendChild(title);
-      top.appendChild(controls);
-      card.appendChild(top);
-
-      const list = document.createElement('div');
-      list.className = 'items-list';
-      if (!section.items || section.items.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'empty-state';
-        empty.textContent = 'Aucun élément dans cette section.';
-        list.appendChild(empty);
-      } else {
-        section.items.forEach((item, itemIdx) => {
-          list.appendChild(createItemCard(item, 'custom', itemIdx, section.items.length, section.id));
-        });
-      }
-      card.appendChild(list);
-
-      const addBtn = document.createElement('button');
-      addBtn.className = 'add-btn';
-      addBtn.innerHTML = '<span class="add-btn-plus">+</span> Ajouter un élément';
-      addBtn.addEventListener('click', () => addItem('custom', section.id));
-      card.appendChild(addBtn);
-
-      host.appendChild(card);
-    });
-  }
-
-  function buildColorPicker({ value, onSelect, allowReset, onReset }) {
-    const wrap = document.createElement('div');
-    wrap.className = 'color-chip-btn' + (!value ? ' inherit' : '');
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    if (value && COLOR_PALETTE[value]) dot.style.background = rgbToCss(COLOR_PALETTE[value].dark);
-    if (!value) {
-      dot.textContent = '—';
-      dot.style.display = 'grid';
-      dot.style.placeItems = 'center';
-      dot.style.fontSize = '10px';
-      dot.style.color = '#7d6a59';
-    }
-    wrap.appendChild(dot);
-
-    const pop = document.createElement('div');
-    pop.className = 'color-popover';
-    const grid = document.createElement('div');
-    grid.className = 'color-grid';
-    Object.entries(COLOR_PALETTE).forEach(([key, c]) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'color-opt' + (value === key ? ' active' : '');
-      btn.style.background = `linear-gradient(180deg, ${rgbToCss(c.light)} 0%, ${rgbToCss(c.dark)} 100%)`;
-      btn.title = c.name;
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        onSelect(key);
-        pop.classList.remove('open');
-      });
-      grid.appendChild(btn);
-    });
-    pop.appendChild(grid);
-    if (allowReset) {
-      const reset = document.createElement('button');
-      reset.type = 'button';
-      reset.className = 'color-reset';
-      reset.textContent = '↻ Couleur de la section';
-      reset.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (onReset) onReset();
-        pop.classList.remove('open');
-      });
-      pop.appendChild(reset);
-    }
-
-    wrap.appendChild(pop);
-    wrap.addEventListener('click', (e) => {
-      e.stopPropagation();
-      document.querySelectorAll('.color-popover.open').forEach(x => x.classList.remove('open'));
-      pop.classList.toggle('open');
-    });
-    return wrap;
-  }
-
-  document.addEventListener('click', () => {
-    document.querySelectorAll('.color-popover.open').forEach(x => x.classList.remove('open'));
-  });
-
-  function rgbToHex(rgb) {
-    const toHex = (n) => n.toString(16).padStart(2, '0');
-    return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
-  }
-
-  function getItemsArray(type, sectionId) {
-    if (type === 'evo') return state.evolutions;
-    if (type === 'fix') return state.correctifs;
-    const sec = state.customSections.find(s => s.id === sectionId);
-    return sec ? sec.items : [];
   }
 
   function renderItems(type) {
@@ -1809,12 +1643,9 @@
       evo: 'Nouvelles fonctionnalités',
       fix: 'Correctifs et améliorations'
     };
-    state.sectionColors = { evo: 'rouge', fix: 'or' };
-    state.customSections = [];
     state.evolutions = EXAMPLE_EVOLUTIONS.map(x => makeItem(x));
     state.correctifs = EXAMPLE_CORRECTIFS.map(x => makeItem(x));
     state.recapBlocks = defaultRecapBlocks(state.evolutions.length, state.correctifs.length);
-    syncRecapColors();
     syncGeneralFields();
     renderAll();
     schedulePreview();
@@ -1860,10 +1691,7 @@
       evo: 'Nouvelles fonctionnalités',
       fix: 'Correctifs et améliorations'
     };
-    state.sectionColors = { evo: 'rouge', fix: 'or' };
-    state.customSections = [];
     state.recapBlocks = defaultRecapBlocks(0, 0);
-    syncRecapColors();
     state.evolutions = [];
     state.correctifs = [];
     syncGeneralFields();
@@ -1918,12 +1746,6 @@
       showClosing: state.showClosing,
       itemSpacing: state.itemSpacing,
       sectionTitles: state.sectionTitles,
-      sectionColors: state.sectionColors,
-      customSections: state.customSections.map(s => ({
-        title: s.title,
-        colorKey: s.colorKey,
-        items: (s.items || []).map(serializeItem)
-      })),
       recapBlocks: state.recapBlocks,
       evolutions: state.evolutions.map(serializeItem),
       correctifs: state.correctifs.map(serializeItem)
@@ -1971,23 +1793,11 @@
           evo: data.sectionTitles?.evo || 'Nouvelles fonctionnalités',
           fix: data.sectionTitles?.fix || 'Correctifs et améliorations'
         };
-        state.sectionColors = {
-          evo: data.sectionColors?.evo || 'rouge',
-          fix: data.sectionColors?.fix || 'or'
-        };
         state.evolutions = Array.isArray(data.evolutions)
           ? data.evolutions.map(deserializeItem)
           : [];
         state.correctifs = Array.isArray(data.correctifs)
           ? data.correctifs.map(deserializeItem)
-          : [];
-        state.customSections = Array.isArray(data.customSections)
-          ? data.customSections.map(s => ({
-              id: uid(),
-              title: s.title || 'Nouvelle section',
-              colorKey: s.colorKey || 'ardoise',
-              items: Array.isArray(s.items) ? s.items.map(deserializeItem) : []
-            }))
           : [];
         state.recapBlocks = Array.isArray(data.recapBlocks) && data.recapBlocks.length > 0
           ? data.recapBlocks.map((x, idx) => ({
@@ -1995,11 +1805,9 @@
               label: x.label || `Bloc ${idx + 1}`,
               value: x.value || '',
               color: x.color || '#82072A',
-              colorKey: x.colorKey || null,
               visible: x.visible !== false
             }))
           : defaultRecapBlocks(state.evolutions.length, state.correctifs.length);
-        syncRecapColors();
         syncGeneralFields();
         renderAll();
         schedulePreview();
@@ -2145,7 +1953,6 @@
     const sectionEvoTitle = data.sectionTitles?.evo || 'Nouvelles fonctionnalités';
     const sectionFixTitle = data.sectionTitles?.fix || 'Correctifs et améliorations';
     const itemSpacing = Math.max(0, Number(data.itemSpacing) || 0);
-    const sectionColors = data.sectionColors || { evo: 'rouge', fix: 'or' };
 
     function setFill(c) { doc.setFillColor(c[0], c[1], c[2]); }
     function setDraw(c) { doc.setDrawColor(c[0], c[1], c[2]); }
@@ -2162,9 +1969,6 @@
     }
     function tint(rgb, ratio) {
       return rgb.map(v => Math.round(v + (255 - v) * ratio));
-    }
-    function paletteFromKey(key, fallback) {
-      return COLOR_PALETTE[key] || COLOR_PALETTE[fallback || 'rouge'];
     }
 
     function drawHeader(isCover) {
@@ -2401,7 +2205,7 @@
     const statBoxes = (data.recapBlocks || [])
       .filter(x => x && x.visible !== false)
       .map(x => {
-        const color = x.colorKey ? (paletteFromKey(x.colorKey, 'bordeaux').dark) : (hexToRgb(x.color) || BORDEAUX);
+        const color = hexToRgb(x.color) || BORDEAUX;
         return {
           num: String(x.value || '—'),
           label: (x.label || 'Bloc').toUpperCase(),
@@ -2412,8 +2216,8 @@
 
     if (statBoxes.length === 0) {
       statBoxes.push(
-        { num: String(nEvo), label: 'NOUVELLES FONCTIONNALITES', bg: ROUGE_LIGHT, color: paletteFromKey(sectionColors.evo, 'rouge').dark },
-        { num: String(nFix), label: 'CORRECTIFS APPLIQUES', bg: GOLD_LIGHT, color: paletteFromKey(sectionColors.fix, 'or').dark }
+        { num: String(nEvo), label: 'NOUVELLES FONCTIONNALITES', bg: ROUGE_LIGHT, color: ROUGE_VIF },
+        { num: String(nFix), label: 'CORRECTIFS APPLIQUES', bg: GOLD_LIGHT, color: GOLD }
       );
     }
 
@@ -2449,9 +2253,23 @@
     // ═════ EVOLUTIONS ═════
     if (data.evolutions.length > 0) {
       y = ensureSpace(y, 20);
-      drawSectionHeader(y, sectionEvoTitle, paletteFromKey(sectionColors.evo, 'rouge').dark);
+      drawSectionHeader(y, sectionEvoTitle, ROUGE_VIF);
       y += 7;
-      y = renderSectionMasonry(data.evolutions, sectionColors.evo, y);
+
+      for (let i = 0; i < data.evolutions.length; i += 2) {
+        const left = data.evolutions[i];
+        const right = data.evolutions[i + 1];
+
+        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W, left).h;
+        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W, right).h : 0;
+        const rowH = Math.max(lh, rh);
+
+        y = ensureSpace(y, rowH);
+
+        drawCard(ML, y, COL_W, left, 'evo');
+        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right, 'evo');
+        y += rowH + itemSpacing;
+      }
     }
 
     // ═════ SECTION BREAK BETWEEN EVOLUTIONS AND CORRECTIFS ═════
@@ -2475,22 +2293,25 @@
     // ═════ CORRECTIFS ═════
     if (data.correctifs.length > 0) {
       y = ensureSpace(y, 20);
-      drawSectionHeader(y, sectionFixTitle, paletteFromKey(sectionColors.fix, 'or').dark);
+      drawSectionHeader(y, sectionFixTitle, GOLD);
       y += 7;
       y = renderSectionMasonry(data.correctifs, sectionColors.fix, y);
     }
 
-    if (Array.isArray(data.customSections)) {
-      data.customSections.forEach(section => {
-        if (!section.items || section.items.length === 0) return;
-        y = ensureSpace(y, 20);
-        const sectionPalette = paletteFromKey(section.colorKey || 'ardoise', 'ardoise');
-        drawSectionHeader(y, section.title || 'Nouvelle section', sectionPalette.dark);
-        y += 7;
-        y = renderSectionMasonry(section.items, section.colorKey || 'ardoise', y);
-        y += 3;
-        y = ensureSpace(y, 12);
-      });
+      for (let i = 0; i < data.correctifs.length; i += 2) {
+        const left = data.correctifs[i];
+        const right = data.correctifs[i + 1];
+
+        const lh = measureCardHeight(left.title, left.description, left.scope, COL_W, left).h;
+        const rh = right ? measureCardHeight(right.title, right.description, right.scope, COL_W, right).h : 0;
+        const rowH = Math.max(lh, rh);
+
+        y = ensureSpace(y, rowH);
+
+        drawCard(ML, y, COL_W, left, 'fix');
+        if (right) drawCard(ML + COL_W + COL_GAP, y, COL_W, right, 'fix');
+        y += rowH + itemSpacing;
+      }
     }
 
     // Empty state
